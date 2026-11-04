@@ -1,14 +1,55 @@
-#[cfg(desktop)]
-use tauri::Manager;
-use tauri_plugin_log::log::{self, LevelFilter};
+mod commands;
+mod error;
+pub mod leap;
+pub mod models;
+mod settings;
+pub mod streaming;
+
+use leap::mock::{self, MockSource};
+use leap::service::{self, ServiceHandle};
+use leap::{SourceError, TrackingSource};
+use streaming::{StreamChannels, TauriSink};
+use tauri::{Manager, RunEvent};
+use tauri_plugin_log::log::LevelFilter;
 
 /// Largest size of a log file before it is rotated, in bytes.
 const MAX_LOG_FILE_SIZE: u128 = 5_000_000;
 
-// Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-#[tauri::command]
-fn greet(name: &str) -> String {
-    format!("Hello, {}! You've been greeted from Rust!", name)
+/// Creates the real tracking source, or explains why it is not available.
+fn open_real_source() -> Result<Box<dyn TrackingSource>, SourceError> {
+    #[cfg(feature = "leapc")]
+    {
+        Ok(Box::new(leap::leapc_source::LeapcSource::open()?))
+    }
+    #[cfg(not(feature = "leapc"))]
+    {
+        Err(SourceError::Unavailable(
+            "this build has no LeapC support; run with MAREY_MOCK=1".to_owned(),
+        ))
+    }
+}
+
+fn start_service(app: &tauri::AppHandle) -> std::io::Result<ServiceHandle> {
+    let mock = mock::is_enabled(std::env::var(mock::MOCK_VAR).ok().as_deref());
+    if mock {
+        log::warn!("simulation mode is on: all device data is synthetic");
+    }
+    let settings = settings::load(app);
+    let channels = StreamChannels::default();
+    let sink = TauriSink::new(app.clone(), channels.clone(), &settings);
+    app.manage(channels);
+    service::spawn(
+        Box::new(move || {
+            if mock {
+                Ok(Box::new(MockSource::new()))
+            } else {
+                open_real_source()
+            }
+        }),
+        sink,
+        settings,
+        mock,
+    )
 }
 
 /// Brings the running instance to the front when the app is launched again.
@@ -64,7 +105,30 @@ pub fn run() {
     builder
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![greet])
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .plugin(tauri_plugin_store::Builder::new().build())
+        .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_clipboard_manager::init())
+        .setup(|app| {
+            let service = start_service(app.handle())?;
+            app.manage(service);
+            Ok(())
+        })
+        .invoke_handler(tauri::generate_handler![
+            commands::get_state,
+            commands::get_logs,
+            commands::subscribe_streams,
+            commands::select_device,
+            commands::update_settings,
+            commands::copy_text,
+            commands::export_text,
+        ])
+        .build(tauri::generate_context!())
+        .expect("error while building the application")
+        .run(|app, event| {
+            if let RunEvent::Exit = event {
+                if let Some(service) = app.try_state::<ServiceHandle>() {
+                    service.shutdown();
+                }
+            }
+        });
 }
