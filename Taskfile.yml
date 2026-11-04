@@ -1,0 +1,121 @@
+# https://taskfile.dev
+version: "3"
+
+vars:
+  TAURI_DIR: src-tauri
+
+tasks:
+  default:
+    desc: List available tasks
+    silent: true
+    cmds:
+      - task --list
+
+  install:
+    desc: Install JavaScript dependencies
+    method: timestamp
+    sources:
+      - package.json
+      - pnpm-lock.yaml
+    generates:
+      - node_modules/.modules.yaml
+    cmds:
+      - pnpm install
+
+  dev:
+    desc: Run the desktop app in development mode
+    deps: [install]
+    cmds:
+      - pnpm tauri dev {{.CLI_ARGS}}
+
+  dev:web:
+    desc: Run only the frontend dev server, without the desktop shell
+    deps: [install]
+    cmds:
+      - pnpm dev
+
+  build:
+    desc: Build the release app and installers
+    deps: [install]
+    cmds:
+      - pnpm tauri build {{.CLI_ARGS}}
+
+  build:debug:
+    desc: Build the app with debug symbols and devtools
+    deps: [install]
+    cmds:
+      - pnpm tauri build --debug {{.CLI_ARGS}}
+
+  build:web:
+    desc: Type-check and build only the frontend
+    deps: [install]
+    cmds:
+      - pnpm build
+
+  typecheck:
+    desc: Type-check the frontend
+    deps: [install]
+    cmds:
+      - pnpm exec tsc --noEmit
+
+  cargo:check:
+    desc: Compile-check the Rust backend
+    dir: "{{.TAURI_DIR}}"
+    cmds:
+      - cargo check
+
+  lint:
+    desc: Lint the Rust backend with Clippy, treating warnings as errors
+    dir: "{{.TAURI_DIR}}"
+    cmds:
+      - cargo clippy --all-targets -- -D warnings
+
+  fmt:
+    desc: Format the Rust backend
+    dir: "{{.TAURI_DIR}}"
+    cmds:
+      - cargo fmt
+
+  fmt:check:
+    desc: Verify the Rust backend formatting
+    dir: "{{.TAURI_DIR}}"
+    cmds:
+      - cargo fmt --check
+
+  test:
+    desc: Run the Rust backend tests
+    dir: "{{.TAURI_DIR}}"
+    cmds:
+      - cargo test
+
+  check:
+    desc: Run all static checks and tests
+    cmds:
+      - task: typecheck
+      - task: fmt:check
+      - task: lint
+      - task: test
+
+  info:
+    desc: Show Tauri environment and dependency information
+    deps: [install]
+    cmds:
+      - pnpm tauri info
+
+  icon:
+    desc: "Generate app icons from a source image (usage: task icon -- path/to/icon.png)"
+    deps: [install]
+    cmds:
+      - pnpm tauri icon {{.CLI_ARGS}}
+
+  update:
+    desc: Update JavaScript and Rust dependencies within their allowed ranges
+    cmds:
+      - pnpm update
+      - cargo update --manifest-path {{.TAURI_DIR}}/Cargo.toml
+
+  clean:
+    desc: Remove build output (frontend bundle and Rust target directory)
+    cmds:
+      - rm -rf dist
+      - cargo clean --manifest-path {{.TAURI_DIR}}/Cargo.toml
