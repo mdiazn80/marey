@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { getAppVersion, openExternalUrl } from "@/lib/tauri";
@@ -16,6 +17,8 @@ function GitHubIcon() {
 }
 
 export function Footer() {
+  const { t } = useTranslation();
+  const reportError = usePanel((s) => s.reportError);
   const [version, setVersion] = useState<string | null>(null);
 
   useEffect(() => {
@@ -24,7 +27,7 @@ export function Footer() {
 
   const openRepository = () => {
     openExternalUrl(REPOSITORY_URL).catch((error) =>
-      usePanel.setState({ actionError: `Could not open the repository: ${String(error)}` }),
+      reportError(t("footer.openRepositoryError", { error: String(error) })),
     );
   };
 
@@ -37,13 +40,13 @@ export function Footer() {
             <Button
               variant="ghost"
               size="icon-xs"
-              aria-label="Open the Marey repository on GitHub"
+              aria-label={t("footer.openRepository")}
               onClick={openRepository}
             >
               <GitHubIcon />
             </Button>
           </TooltipTrigger>
-          <TooltipContent side="top">GitHub repository</TooltipContent>
+          <TooltipContent side="top">{t("footer.repository")}</TooltipContent>
         </Tooltip>
       </TooltipProvider>
     </footer>

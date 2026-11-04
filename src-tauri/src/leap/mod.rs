@@ -80,3 +80,20 @@ pub trait TrackingSource: Send {
     /// Applies new settings to the active device.
     fn apply(&mut self, device_id: u32, settings: &Settings) -> Result<(), SourceError>;
 }
+
+/// Creates the source for this run: the simulation when asked for, otherwise LeapC.
+pub fn open_source(mock: bool) -> Result<Box<dyn TrackingSource>, SourceError> {
+    if mock {
+        return Ok(Box::new(mock::MockSource::new()));
+    }
+    #[cfg(feature = "leapc")]
+    {
+        Ok(Box::new(leapc_source::LeapcSource::open()?))
+    }
+    #[cfg(not(feature = "leapc"))]
+    {
+        Err(SourceError::Unavailable(
+            "this build has no LeapC support; run with MAREY_MOCK=1".to_owned(),
+        ))
+    }
+}

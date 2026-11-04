@@ -74,6 +74,18 @@ pub fn copy_text(app: AppHandle, text: String) -> Result<(), AppError> {
         .map_err(|e| AppError::Clipboard(e.to_string()))
 }
 
+/// Translates the tray menu. The frontend owns all translations, so it sends the text to show.
+#[cfg(desktop)]
+#[tauri::command(async)]
+pub fn set_tray_labels(
+    menu: State<'_, crate::tray::TrayMenu>,
+    show: String,
+    quit: String,
+) -> Result<(), AppError> {
+    menu.set_labels(&show, &quit)?;
+    Ok(())
+}
+
 /// Asks where to save the text. Returns the chosen path, or `None` if the user cancelled.
 #[tauri::command(async)]
 pub fn export_text(

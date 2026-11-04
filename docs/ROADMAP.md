@@ -28,7 +28,7 @@ mock mode.
 | Device transform and multi-device fusion                  | `Core`, which already tracks several devices                      |
 | Gesture detection and pose recognition                    | A consumer of `TrackingFrame`, independent of Tauri               |
 | Output bridges: OSC, MIDI, WebSocket, OpenXR              | Additional `EventSink` implementations                            |
-| Projected hand points on camera images                    | Marked in `CamerasView.tsx` (`LeapRectilinearToPixel`)            |
+| Projected hand points on camera images                    | Marked in `drawPlane.ts` (`LeapRectilinearToPixel`)               |
 | Raw camera access outside LeapC (UVC/libusb)              | A new `TrackingSource`; see the licensing note below              |
 | Windows and Linux packaging                               | Paths in `crates/leapc` and `crates/leapc-sys/build.rs`           |
 

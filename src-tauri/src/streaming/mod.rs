@@ -40,6 +40,22 @@ impl StreamChannels {
             channels.images = Some(images);
         }
     }
+
+    /// Sends to one stream, building the message only when someone is subscribed to it.
+    /// Returns whether the message was delivered.
+    fn send(
+        &self,
+        stream: fn(&Channels) -> Option<&Channel<InvokeResponseBody>>,
+        message: impl FnOnce() -> Option<InvokeResponseBody>,
+    ) -> bool {
+        let Ok(channels) = self.0.lock() else {
+            return false;
+        };
+        let Some(channel) = stream(&channels) else {
+            return false;
+        };
+        message().is_some_and(|message| channel.send(message).is_ok())
+    }
 }
 
 /// Encodes a stereo image as a little-endian header followed by the left and right planes:
@@ -85,17 +101,15 @@ impl EventSink for TauriSink {
         if !self.frames.allow(Instant::now()) {
             return false;
         }
-        let Ok(channels) = self.channels.0.lock() else {
-            return false;
-        };
-        let Some(channel) = &channels.frames else {
-            return false;
-        };
         // Serializing here avoids cloning the frame just to hand it to the channel.
-        match serde_json::to_string(frame) {
-            Ok(json) => channel.send(InvokeResponseBody::Json(json)).is_ok(),
-            Err(_) => false,
-        }
+        self.channels.send(
+            |channels| channels.frames.as_ref(),
+            || {
+                serde_json::to_string(frame)
+                    .ok()
+                    .map(InvokeResponseBody::Json)
+            },
+        )
     }
 
     fn images(&mut self, images: &StereoImage<'_>) -> bool {
@@ -103,15 +117,10 @@ impl EventSink for TauriSink {
         if !self.images.allow(Instant::now()) {
             return false;
         }
-        let Ok(channels) = self.channels.0.lock() else {
-            return false;
-        };
-        let Some(channel) = &channels.images else {
-            return false;
-        };
-        channel
-            .send(InvokeResponseBody::Raw(encode_images(images)))
-            .is_ok()
+        self.channels.send(
+            |channels| channels.images.as_ref(),
+            || Some(InvokeResponseBody::Raw(encode_images(images))),
+        )
     }
 
     fn log(&mut self, entry: &LogEntry) {

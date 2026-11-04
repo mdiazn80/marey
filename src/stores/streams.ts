@@ -1,6 +1,7 @@
 // Latest stream data, kept outside React so high-rate updates never cause a re-render.
 // Consumers read it from their own animation loop.
-import type { TrackingFrame } from "../types/generated/TrackingFrame";
+import type { Hand } from "@/types/generated/Hand";
+import type { TrackingFrame } from "@/types/generated/TrackingFrame";
 
 /** A stereo image message: a 16-byte little-endian header, then the left and right planes. */
 export interface StereoImages {
@@ -13,6 +14,9 @@ export interface StereoImages {
 }
 
 const IMAGE_HEADER_LENGTH = 16;
+/** A stream counts as stopped after this long without data, in milliseconds. */
+const FRAME_STALE_AFTER_MS = 500;
+const IMAGE_STALE_AFTER_MS = 1000;
 
 export function decodeImages(buffer: ArrayBuffer): StereoImages | null {
   if (buffer.byteLength < IMAGE_HEADER_LENGTH) return null;
@@ -33,13 +37,25 @@ export function decodeImages(buffer: ArrayBuffer): StereoImages | null {
   };
 }
 
-export const streams = {
+const streams = {
   frame: null as TrackingFrame | null,
   /** `performance.now()` when `frame` arrived. */
   frameTime: 0,
   images: null as StereoImages | null,
   imageTime: 0,
 };
+
+/** The hands in the latest frame, or none once the frame stream has stopped. */
+export function currentHands(): Hand[] {
+  const fresh = performance.now() - streams.frameTime < FRAME_STALE_AFTER_MS;
+  return fresh ? (streams.frame?.hands ?? []) : [];
+}
+
+/** The latest images, or null once the image stream has stopped. */
+export function currentImages(): StereoImages | null {
+  const fresh = performance.now() - streams.imageTime < IMAGE_STALE_AFTER_MS;
+  return fresh ? streams.images : null;
+}
 
 export function receiveFrame(frame: TrackingFrame) {
   streams.frame = frame;

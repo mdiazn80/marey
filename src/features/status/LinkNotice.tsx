@@ -1,35 +1,34 @@
-import { Notice } from "../../app/ui";
-import { usePanel } from "../../stores/panel";
+import { useTranslation } from "react-i18next";
+import { Notice } from "@/components/status";
+import { usePanel } from "@/stores/panel";
 
 /** Explains the current connection problem, or a device that is listed but sends no frames. */
 export function LinkNotice() {
+  const { t } = useTranslation();
   const state = usePanel((s) => s.state);
   if (!state) return null;
   const { link, devices, activeDeviceId, settings, stats } = state;
 
   switch (link.state) {
     case "starting":
-      return <Notice tone="muted" title="Starting…" />;
+      return <Notice tone="muted" title={t("link.starting")} />;
     case "sdkMissing":
       return (
-        <Notice tone="bad" title="Ultraleap tracking software not found">
-          <p>
-            Install Ultraleap Hand Tracking, or set LEAPSDK_LIB_PATH to the SDK lib directory. Marey
-            retries every few seconds. To try the app without it, start it with MAREY_MOCK=1.
-          </p>
+        <Notice tone="bad" title={t("link.sdkMissingTitle")}>
+          <p>{t("link.sdkMissingBody")}</p>
           {link.detail && <p className="selectable mt-1 font-mono text-xs">{link.detail}</p>}
         </Notice>
       );
     case "serviceNotRunning":
       return (
-        <Notice tone="bad" title="The tracking service is not running">
-          Start Ultraleap Hand Tracking. Marey reconnects when the service comes back.
+        <Notice tone="bad" title={t("link.serviceNotRunningTitle")}>
+          {t("link.serviceNotRunningBody")}
         </Notice>
       );
     case "connecting":
       return (
-        <Notice tone="warn" title="Connecting to the tracking service…">
-          If this does not clear, check that Ultraleap Hand Tracking is running.
+        <Notice tone="warn" title={t("link.connectingTitle")}>
+          {t("link.connectingBody")}
         </Notice>
       );
     case "connected":
@@ -38,8 +37,8 @@ export function LinkNotice() {
 
   if (devices.length === 0) {
     return (
-      <Notice tone="warn" title="No device connected">
-        Plug in a Leap Motion or Ultraleap device. It appears here automatically.
+      <Notice tone="warn" title={t("link.noDeviceTitle")}>
+        {t("link.noDeviceBody")}
       </Notice>
     );
   }
@@ -47,9 +46,8 @@ export function LinkNotice() {
   // The rate, not the status flags: an original controller reports status 0 even while streaming.
   if (active && !settings.paused && stats.trackingFps === 0) {
     return (
-      <Notice tone="warn" title="Device detected, but no frames are arriving">
-        The service lists {active.product} but is not sending tracking frames. Unplug the device and
-        plug it back in. Another app may also have paused tracking for the whole service.
+      <Notice tone="warn" title={t("link.noFramesTitle")}>
+        {t("link.noFramesBody", { product: active.product })}
       </Notice>
     );
   }

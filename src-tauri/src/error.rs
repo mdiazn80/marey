@@ -14,6 +14,9 @@ pub enum AppError {
     Io(#[from] std::io::Error),
     #[error("could not use the clipboard: {0}")]
     Clipboard(String),
+    #[cfg(desktop)]
+    #[error("could not update the tray menu: {0}")]
+    Tray(#[from] tauri::Error),
 }
 
 // The frontend receives the message as a plain string.

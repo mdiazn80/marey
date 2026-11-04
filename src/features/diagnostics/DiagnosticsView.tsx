@@ -1,32 +1,29 @@
-import { useState } from "react";
-import { Page } from "../../app/ui";
+import { useTranslation } from "react-i18next";
+import { Page, WaitingPage } from "@/components/layout";
 import { Button } from "@/components/ui/button";
-import { copyText } from "../../lib/tauri";
-import { usePanel } from "../../stores/panel";
+import { useActionFeedback } from "@/hooks/useActionFeedback";
+import { copyText } from "@/lib/tauri";
+import { usePanel } from "@/stores/panel";
 import { buildReport } from "./report";
 
 export function DiagnosticsView() {
+  const { t } = useTranslation();
   const state = usePanel((s) => s.state);
-  const [feedback, setFeedback] = useState("");
-  if (!state) return <Page title="Diagnostics">Waiting for the backend…</Page>;
+  const { feedback, run } = useActionFeedback();
+  if (!state) return <WaitingPage title={t("views.diagnostics")} />;
   const report = buildReport(state);
   return (
     <Page
-      title="Diagnostics"
+      title={t("views.diagnostics")}
       actions={
         <>
           {feedback && <span className="text-xs text-muted-foreground">{feedback}</span>}
           <Button
             variant="outline"
             size="sm"
-            onClick={() => {
-              copyText(report).then(
-                () => setFeedback("Copied"),
-                (error) => setFeedback(String(error)),
-              );
-            }}
+            onClick={() => run(() => copyText(report).then(() => t("common.copied")))}
           >
-            Copy for bug report
+            {t("diagnostics.copyReport")}
           </Button>
         </>
       }

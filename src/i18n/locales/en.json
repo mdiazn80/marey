@@ -1,0 +1,154 @@
+{
+  "common": {
+    "waitingForBackend": "Waiting for the backend…",
+    "copied": "Copied",
+    "on": "on",
+    "off": "off",
+    "fps": "{{value}} fps",
+    "notReported": "Not reported"
+  },
+  "views": {
+    "visualizer": "Visualizer",
+    "status": "Status",
+    "devices": "Devices",
+    "cameras": "Cameras",
+    "settings": "Settings",
+    "logs": "Logs",
+    "diagnostics": "Diagnostics"
+  },
+  "app": {
+    "simulationBanner": "Simulation mode: all device data shown is synthetic (MAREY_MOCK=1)",
+    "backendError": "Could not reach the backend",
+    "actionError": "That did not work",
+    "viewsLabel": "Views"
+  },
+  "footer": {
+    "openRepository": "Open the Marey repository on GitHub",
+    "repository": "GitHub repository",
+    "openRepositoryError": "Could not open the repository: {{error}}"
+  },
+  "tray": {
+    "show": "Show Marey",
+    "quit": "Quit Marey"
+  },
+  "link": {
+    "states": {
+      "starting": "Starting",
+      "sdkMissing": "Software not found",
+      "serviceNotRunning": "Service not running",
+      "connecting": "Connecting",
+      "connected": "Connected"
+    },
+    "starting": "Starting…",
+    "sdkMissingTitle": "Ultraleap tracking software not found",
+    "sdkMissingBody": "Install Ultraleap Hand Tracking, or set LEAPSDK_LIB_PATH to the SDK lib directory. Marey retries every few seconds. To try the app without it, start it with MAREY_MOCK=1.",
+    "serviceNotRunningTitle": "The tracking service is not running",
+    "serviceNotRunningBody": "Start Ultraleap Hand Tracking. Marey reconnects when the service comes back.",
+    "connectingTitle": "Connecting to the tracking service…",
+    "connectingBody": "If this does not clear, check that Ultraleap Hand Tracking is running.",
+    "noDeviceTitle": "No device connected",
+    "noDeviceBody": "Plug in a Leap Motion or Ultraleap device. It appears here automatically.",
+    "noFramesTitle": "Device detected, but no frames are arriving",
+    "noFramesBody": "The service lists {{product}} but is not sending tracking frames. Unplug the device and plug it back in. Another app may also have paused tracking for the whole service."
+  },
+  "status": {
+    "trackingService": "Tracking service",
+    "connection": "Connection",
+    "serviceVersion": "Service version",
+    "clientVersion": "LeapC client version",
+    "connectedDevices": "Connected devices",
+    "dataFlow": "Data flow",
+    "trackingRate": "Tracking rate",
+    "imageRate": "Image rate",
+    "framesReceived": "Frames received"
+  },
+  "devices": {
+    "active": "Active",
+    "makeActive": "Make active",
+    "serial": "Serial number",
+    "firmware": "Firmware",
+    "firmwareNotExposed": "Not exposed by LeapC",
+    "productId": "Product ID",
+    "baseline": "Camera baseline",
+    "fieldOfView": "Field of view",
+    "range": "Range",
+    "trackingRate": "Tracking rate",
+    "rawStatus": "Raw status",
+    "noFlags": "No status flags set",
+    "flags": {
+      "streaming": "Streaming",
+      "paused": "Paused",
+      "robust": "Robust mode",
+      "smudged": "Smudged",
+      "lowResource": "Low resource",
+      "unknownFailure": "Unknown failure",
+      "badCalibration": "Bad calibration",
+      "badFirmware": "Bad firmware",
+      "badTransport": "Bad transport",
+      "badControl": "Bad control"
+    }
+  },
+  "visualizer": {
+    "tracking": "Tracking {{fps}} fps",
+    "render": "Render {{fps}} fps",
+    "noHands": "No hands in view",
+    "leftHand": "Left hand",
+    "rightHand": "Right hand",
+    "confidence": "Confidence",
+    "grab": "Grab",
+    "pinch": "Pinch",
+    "pinchDistance": "Pinch distance",
+    "visible": "Visible"
+  },
+  "cameras": {
+    "left": "Left camera",
+    "right": "Right camera",
+    "stopImages": "Stop images",
+    "allowImages": "Allow images",
+    "imagesOffTitle": "Images are off",
+    "imagesOffBody": "Allow images to see the infrared view of each camera.",
+    "waiting": "Waiting for images from the device…",
+    "unsupported": "This device's image format is not supported yet"
+  },
+  "settings": {
+    "general": "General",
+    "language": "Language",
+    "tracking": "Tracking",
+    "trackingMode": "Tracking mode",
+    "deviceReports": "Device reports: {{mode}}",
+    "modes": {
+      "desktop": "Desktop",
+      "hmd": "Head-mounted",
+      "screenTop": "Screentop"
+    },
+    "pause": "Pause tracking",
+    "pauseHint": "Pauses the service for every app that uses it",
+    "images": "Allow images",
+    "imagesHint": "Lets the Cameras view receive infrared images",
+    "backgroundFrames": "Background frames",
+    "backgroundFramesHint": "Keep receiving data while this window is not focused",
+    "reportedMismatch": "{{hint}}. Requested {{requested}}, but the service reports {{actual}}",
+    "displayRates": "Display rates",
+    "frameRate": "Tracking frames to the UI",
+    "imageRate": "Camera images to the UI",
+    "rateRange": "1 to {{max}} Hz",
+    "savedNote": "Saved automatically and applied again on every start and device connection."
+  },
+  "logs": {
+    "levels": {
+      "all": "All severities",
+      "critical": "Critical",
+      "warning": "Warning",
+      "info": "Info"
+    },
+    "filter": "Filter by severity",
+    "copy": "Copy",
+    "export": "Export",
+    "clear": "Clear",
+    "saved": "Saved {{path}}",
+    "empty": "No log entries."
+  },
+  "diagnostics": {
+    "copyReport": "Copy for bug report"
+  }
+}

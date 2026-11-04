@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Page } from "../../app/ui";
+import { useTranslation } from "react-i18next";
+import { Page } from "@/components/layout";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -8,17 +9,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { copyText, exportText } from "../../lib/tauri";
-import { usePanel } from "../../stores/panel";
-import type { LogEntry } from "../../types/generated/LogEntry";
-import type { LogSeverity } from "../../types/generated/LogSeverity";
+import { useActionFeedback } from "@/hooks/useActionFeedback";
+import { copyText, exportText } from "@/lib/tauri";
+import { usePanel } from "@/stores/panel";
+import type { LogEntry } from "@/types/generated/LogEntry";
+import type { LogSeverity } from "@/types/generated/LogSeverity";
 
-const LEVELS: { value: LogSeverity | "all"; label: string }[] = [
-  { value: "all", label: "All severities" },
-  { value: "critical", label: "Critical" },
-  { value: "warning", label: "Warning" },
-  { value: "info", label: "Info" },
-];
+const LEVELS = ["all", "critical", "warning", "info"] as const;
 
 const SEVERITY_COLOR: Record<LogSeverity, string> = {
   critical: "text-destructive",
@@ -27,16 +24,18 @@ const SEVERITY_COLOR: Record<LogSeverity, string> = {
   unknown: "text-muted-foreground",
 };
 
+/** Log lines stay untranslated, because they come from the backend and go into bug reports. */
 function formatEntry(entry: LogEntry) {
   const time = new Date(entry.timestampMs).toISOString();
   return `${time} ${entry.severity.toUpperCase()} [${entry.source}] ${entry.message}`;
 }
 
 export function LogsView() {
+  const { t } = useTranslation();
   const logs = usePanel((s) => s.logs);
   const clearLogs = usePanel((s) => s.clearLogs);
   const [level, setLevel] = useState<LogSeverity | "all">("all");
-  const [feedback, setFeedback] = useState("");
+  const { feedback, run } = useActionFeedback();
   const bottom = useRef<HTMLDivElement>(null);
 
   const visible = useMemo(
@@ -49,24 +48,20 @@ export function LogsView() {
     bottom.current?.scrollIntoView();
   }, [visible.length]);
 
-  const run = (action: () => Promise<string>) => {
-    action().then(setFeedback, (error) => setFeedback(String(error)));
-  };
-
   return (
     <Page
-      title="Logs"
+      title={t("views.logs")}
       actions={
         <>
           {feedback && <span className="text-xs text-muted-foreground">{feedback}</span>}
           <Select value={level} onValueChange={(value) => setLevel(value as LogSeverity | "all")}>
-            <SelectTrigger size="sm" aria-label="Filter by severity" className="w-36">
+            <SelectTrigger size="sm" aria-label={t("logs.filter")} className="w-44">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
               {LEVELS.map((item) => (
-                <SelectItem key={item.value} value={item.value}>
-                  {item.label}
+                <SelectItem key={item} value={item}>
+                  {t(`logs.levels.${item}`)}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -74,9 +69,9 @@ export function LogsView() {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => run(() => copyText(asText()).then(() => "Copied"))}
+            onClick={() => run(() => copyText(asText()).then(() => t("common.copied")))}
           >
-            Copy
+            {t("logs.copy")}
           </Button>
           <Button
             variant="outline"
@@ -84,21 +79,21 @@ export function LogsView() {
             onClick={() =>
               run(() =>
                 exportText("marey-logs.txt", asText()).then((path) =>
-                  path ? `Saved ${path}` : "",
+                  path ? t("logs.saved", { path }) : "",
                 ),
               )
             }
           >
-            Export
+            {t("logs.export")}
           </Button>
           <Button variant="ghost" size="sm" onClick={clearLogs}>
-            Clear
+            {t("logs.clear")}
           </Button>
         </>
       }
     >
       <div className="selectable min-h-0 flex-1 overflow-y-auto rounded border border-border bg-card p-3 font-mono text-xs leading-5">
-        {visible.length === 0 && <p className="text-muted-foreground">No log entries.</p>}
+        {visible.length === 0 && <p className="text-muted-foreground">{t("logs.empty")}</p>}
         {visible.map((entry, index) => (
           <div key={index} className={SEVERITY_COLOR[entry.severity]}>
             {formatEntry(entry)}

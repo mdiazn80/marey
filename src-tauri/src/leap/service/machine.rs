@@ -1,23 +1,14 @@
-//! The background thread that owns the tracking source.
+//! The service state machine, separate from the thread so tests can drive it directly.
 
-use std::collections::VecDeque;
-use std::sync::mpsc::{self, Receiver, RecvTimeoutError, Sender};
-use std::sync::{Arc, Mutex};
-use std::thread::{self, JoinHandle};
-use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
+use std::sync::mpsc::Sender;
+use std::time::Instant;
 
-use super::mapping;
-use super::{SourceError, SourceEvent, StereoImage, TrackingSource};
+use super::logs::LogBuffer;
+use crate::leap::{mapping, SourceError, SourceEvent, StereoImage, TrackingSource};
 use crate::models::{
-    FrameStats, LinkState, LinkStatus, LogEntry, LogSeverity, LogSource, PanelState, PolicyState,
-    Settings, TrackingFrame, TrackingMode,
+    DeviceSummary, FrameStats, LinkState, LinkStatus, LogEntry, LogSeverity, LogSource, PanelState,
+    PolicyState, Settings, TrackingFrame, TrackingMode,
 };
-
-const POLL_TIMEOUT: Duration = Duration::from_millis(20);
-const REFRESH_INTERVAL: Duration = Duration::from_secs(1);
-const SOURCE_RETRY_INTERVAL: Duration = Duration::from_secs(5);
-const POLL_ERROR_BACKOFF: Duration = Duration::from_millis(100);
-const MAX_LOG_ENTRIES: usize = 2000;
 
 /// Receives what the service produces. Implemented by the streaming layer and by test doubles.
 pub trait EventSink: Send + 'static {
@@ -30,35 +21,6 @@ pub trait EventSink: Send + 'static {
     fn settings(&mut self, settings: &Settings);
 }
 
-/// Recent log entries, readable from any thread.
-#[derive(Clone, Default)]
-pub struct LogBuffer(Arc<Mutex<VecDeque<LogEntry>>>);
-
-impl LogBuffer {
-    fn push(&self, entry: LogEntry) {
-        if let Ok(mut entries) = self.0.lock() {
-            if entries.len() == MAX_LOG_ENTRIES {
-                entries.pop_front();
-            }
-            entries.push_back(entry);
-        }
-    }
-
-    pub fn snapshot(&self) -> Vec<LogEntry> {
-        self.0
-            .lock()
-            .map(|entries| entries.iter().cloned().collect())
-            .unwrap_or_default()
-    }
-}
-
-pub fn now_ms() -> u64 {
-    SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map(|d| d.as_millis() as u64)
-        .unwrap_or(0)
-}
-
 type Reply<T> = Sender<Result<T, String>>;
 
 /// A request to the service thread.
@@ -69,7 +31,10 @@ pub enum Command {
     Shutdown,
 }
 
-/// The service state machine, separate from the thread so tests can drive it directly.
+/// The source, when one exists. Commands are also served while it is still missing.
+type AvailableSource<'a> = Option<&'a mut (dyn TrackingSource + 'static)>;
+
+/// Applies source events and commands to the panel state, and publishes the result.
 pub struct Core<K: EventSink> {
     state: PanelState,
     sink: K,
@@ -122,12 +87,7 @@ impl<K: EventSink> Core<K> {
             LogSeverity::Warning => log::warn!("{message}"),
             _ => log::info!("{message}"),
         }
-        self.push_log(LogEntry {
-            timestamp_ms: now_ms(),
-            severity,
-            source: LogSource::App,
-            message,
-        });
+        self.push_log(LogEntry::now(severity, LogSource::App, message));
     }
 
     fn push_log(&mut self, entry: LogEntry) {
@@ -141,124 +101,143 @@ impl<K: EventSink> Core<K> {
         self.pending_activation = None;
     }
 
-    /// Applies one source event to the state and forwards what the UI needs.
+    /// Applies one source event to the state and forwards what the UI needs. High-rate stream
+    /// events only touch the counters, so they do not republish the state.
     pub fn handle(&mut self, event: SourceEvent<'_>) {
         match event {
-            SourceEvent::Frame(frame) => {
-                self.window_frames += 1;
-                self.state.stats.frames_received += 1;
-                self.state.stats.reported_fps = frame.framerate;
-                if self.sink.frame(&frame) {
-                    self.state.stats.frames_sent += 1;
-                }
-                return;
-            }
-            SourceEvent::Images(images) => {
-                self.window_images += 1;
-                self.state.stats.images_received += 1;
-                if self.sink.images(&images) {
-                    self.state.stats.images_sent += 1;
-                }
-                return;
-            }
-            SourceEvent::DroppedFrame => {
-                self.state.stats.frames_dropped += 1;
-                return;
-            }
-            SourceEvent::Log(entry) => {
-                self.push_log(entry);
-                return;
-            }
+            SourceEvent::Frame(frame) => self.on_frame(&frame),
+            SourceEvent::Images(images) => self.on_images(&images),
+            SourceEvent::DroppedFrame => self.state.stats.frames_dropped += 1,
+            SourceEvent::Log(entry) => self.push_log(entry),
             SourceEvent::Link {
                 state,
                 client_version,
                 service_version,
-            } => {
-                let link = &mut self.state.link;
-                let changed = link.state != state
-                    || (client_version.is_some() && link.client_version != client_version)
-                    || (service_version.is_some() && link.service_version != service_version);
-                if !changed {
-                    return;
-                }
-                link.state = state;
-                link.detail = None;
-                if client_version.is_some() {
-                    link.client_version = client_version;
-                }
-                if service_version.is_some() {
-                    link.service_version = service_version;
-                }
-                if state != LinkState::Connected {
-                    self.clear_devices();
-                }
-                self.app_log(LogSeverity::Info, format!("service link is now {state:?}"));
-            }
-            SourceEvent::ConnectionLost => {
-                self.state.link.state = LinkState::Connecting;
-                self.state.link.service_version = None;
-                self.clear_devices();
-                self.app_log(
-                    LogSeverity::Warning,
-                    "connection to the tracking service lost; waiting for it to return".to_owned(),
-                );
-            }
-            SourceEvent::DeviceAdded(device) => {
-                let id = device.id;
-                self.app_log(
-                    LogSeverity::Info,
-                    format!("device connected: {} (id {id})", device.product),
-                );
-                match self.state.devices.iter_mut().find(|d| d.id == id) {
-                    Some(existing) => *existing = device,
-                    None => self.state.devices.push(device),
-                }
-                if self.state.active_device_id.is_none() {
-                    self.state.active_device_id = Some(id);
-                    self.pending_activation = Some(id);
-                }
-            }
-            SourceEvent::DeviceLost(id) => {
-                self.state.devices.retain(|d| d.id != id);
-                self.app_log(LogSeverity::Warning, format!("device {id} disconnected"));
-                if self.state.active_device_id == Some(id) {
-                    let next = self.state.devices.first().map(|d| d.id);
-                    self.state.active_device_id = next;
-                    self.pending_activation = next;
-                }
-            }
-            SourceEvent::DeviceStatus { id, status } => {
-                let Some(device) = self.state.devices.iter_mut().find(|d| d.id == id) else {
-                    return;
-                };
-                if device.raw_status == status {
-                    return;
-                }
-                device.raw_status = status;
-                device.flags = mapping::device_flags(status);
-                self.app_log(
-                    LogSeverity::Info,
-                    format!("device {id} status is now 0x{status:08X}"),
-                );
-            }
+            } => self.on_link(state, client_version, service_version),
+            SourceEvent::ConnectionLost => self.on_connection_lost(),
+            SourceEvent::DeviceAdded(device) => self.on_device_added(device),
+            SourceEvent::DeviceLost(id) => self.on_device_lost(id),
+            SourceEvent::DeviceStatus { id, status } => self.on_device_status(id, status),
             SourceEvent::DeviceFailure { status } => {
                 self.app_log(
                     LogSeverity::Critical,
                     format!("device failure 0x{status:08X}"),
                 );
+                self.dirty = true;
             }
             SourceEvent::Policy(raw) => {
                 self.state.policies = mapping::policy_state(raw);
+                self.dirty = true;
             }
             SourceEvent::TrackingMode(raw) => {
                 self.state.tracking_mode = mapping::tracking_mode(raw);
+                self.dirty = true;
             }
+        }
+    }
+
+    fn on_frame(&mut self, frame: &TrackingFrame) {
+        self.window_frames += 1;
+        self.state.stats.frames_received += 1;
+        self.state.stats.reported_fps = frame.framerate;
+        if self.sink.frame(frame) {
+            self.state.stats.frames_sent += 1;
+        }
+    }
+
+    fn on_images(&mut self, images: &StereoImage<'_>) {
+        self.window_images += 1;
+        self.state.stats.images_received += 1;
+        if self.sink.images(images) {
+            self.state.stats.images_sent += 1;
+        }
+    }
+
+    fn on_link(
+        &mut self,
+        state: LinkState,
+        client_version: Option<String>,
+        service_version: Option<String>,
+    ) {
+        let link = &mut self.state.link;
+        let changed = link.state != state
+            || (client_version.is_some() && link.client_version != client_version)
+            || (service_version.is_some() && link.service_version != service_version);
+        if !changed {
+            return;
+        }
+        link.state = state;
+        link.detail = None;
+        if client_version.is_some() {
+            link.client_version = client_version;
+        }
+        if service_version.is_some() {
+            link.service_version = service_version;
+        }
+        if state != LinkState::Connected {
+            self.clear_devices();
+        }
+        self.app_log(LogSeverity::Info, format!("service link is now {state:?}"));
+        self.dirty = true;
+    }
+
+    fn on_connection_lost(&mut self) {
+        self.state.link.state = LinkState::Connecting;
+        self.state.link.service_version = None;
+        self.clear_devices();
+        self.app_log(
+            LogSeverity::Warning,
+            "connection to the tracking service lost; waiting for it to return".to_owned(),
+        );
+        self.dirty = true;
+    }
+
+    fn on_device_added(&mut self, device: DeviceSummary) {
+        let id = device.id;
+        self.app_log(
+            LogSeverity::Info,
+            format!("device connected: {} (id {id})", device.product),
+        );
+        match self.state.devices.iter_mut().find(|d| d.id == id) {
+            Some(existing) => *existing = device,
+            None => self.state.devices.push(device),
+        }
+        if self.state.active_device_id.is_none() {
+            self.state.active_device_id = Some(id);
+            self.pending_activation = Some(id);
         }
         self.dirty = true;
     }
 
+    fn on_device_lost(&mut self, id: u32) {
+        self.state.devices.retain(|d| d.id != id);
+        self.app_log(LogSeverity::Warning, format!("device {id} disconnected"));
+        if self.state.active_device_id == Some(id) {
+            let next = self.state.devices.first().map(|d| d.id);
+            self.state.active_device_id = next;
+            self.pending_activation = next;
+        }
+        self.dirty = true;
+    }
+
+    fn on_device_status(&mut self, id: u32, status: u32) {
+        let Some(device) = self.state.devices.iter_mut().find(|d| d.id == id) else {
+            return;
+        };
+        if device.raw_status == status {
+            return;
+        }
+        device.raw_status = status;
+        device.flags = mapping::device_flags(status);
+        self.app_log(
+            LogSeverity::Info,
+            format!("device {id} status is now 0x{status:08X}"),
+        );
+        self.dirty = true;
+    }
+
     /// Runs work that needs the source, which is not reachable while it is polling.
-    fn run_pending(&mut self, source: &mut dyn TrackingSource) {
+    pub(super) fn run_pending(&mut self, source: &mut dyn TrackingSource) {
         if let Some(id) = self.pending_activation.take() {
             if let Err(error) = source.activate(id, &self.state.settings) {
                 self.app_log(
@@ -292,33 +271,32 @@ impl<K: EventSink> Core<K> {
         }
     }
 
-    fn set_unavailable(&mut self, reason: String) {
-        if self.state.link.state != LinkState::SdkMissing
-            || self.state.link.detail.as_deref() != Some(&reason)
-        {
-            self.state.link.state = LinkState::SdkMissing;
-            self.state.link.detail = Some(reason.clone());
-            self.state.link.client_version = None;
-            self.state.link.service_version = None;
-            self.clear_devices();
-            self.dirty = true;
-            self.app_log(LogSeverity::Warning, reason);
+    pub(super) fn set_unavailable(&mut self, reason: String) {
+        let link = &mut self.state.link;
+        if link.state == LinkState::SdkMissing && link.detail.as_deref() == Some(&reason) {
+            return;
         }
+        link.state = LinkState::SdkMissing;
+        link.detail = Some(reason.clone());
+        link.client_version = None;
+        link.service_version = None;
+        self.clear_devices();
+        self.dirty = true;
+        self.app_log(LogSeverity::Warning, reason);
     }
 
-    fn note_poll_error(&mut self, error: Option<&SourceError>) {
+    /// Logs a poll failure once, instead of on every poll while it lasts.
+    pub(super) fn note_poll_error(&mut self, error: Option<&SourceError>) {
         let message = error.map(ToString::to_string);
-        if let (Some(text), true) = (&message, message != self.last_poll_error) {
-            self.app_log(LogSeverity::Warning, format!("poll failed: {text}"));
+        if message != self.last_poll_error {
+            if let Some(text) = &message {
+                self.app_log(LogSeverity::Warning, format!("poll failed: {text}"));
+            }
         }
         self.last_poll_error = message;
     }
 
-    fn select_device(
-        &mut self,
-        id: u32,
-        source: Option<&mut (dyn TrackingSource + 'static)>,
-    ) -> Result<(), String> {
+    fn select_device(&mut self, id: u32, source: AvailableSource<'_>) -> Result<(), String> {
         if !self.state.devices.iter().any(|d| d.id == id) {
             return Err(format!("device {id} is not connected"));
         }
@@ -334,7 +312,7 @@ impl<K: EventSink> Core<K> {
     fn update_settings(
         &mut self,
         settings: Settings,
-        source: Option<&mut (dyn TrackingSource + 'static)>,
+        source: AvailableSource<'_>,
     ) -> Result<(), String> {
         let settings = settings.sanitized();
         self.state.settings = settings;
@@ -347,11 +325,7 @@ impl<K: EventSink> Core<K> {
     }
 
     /// Returns false when the service must stop.
-    fn command(
-        &mut self,
-        command: Command,
-        source: Option<&mut (dyn TrackingSource + 'static)>,
-    ) -> bool {
+    pub(super) fn command(&mut self, command: Command, source: AvailableSource<'_>) -> bool {
         match command {
             Command::GetState(reply) => {
                 let _ = reply.send(self.state.clone());
@@ -368,130 +342,14 @@ impl<K: EventSink> Core<K> {
     }
 }
 
-/// Handle to the running service thread.
-pub struct ServiceHandle {
-    commands: Sender<Command>,
-    logs: LogBuffer,
-    thread: Mutex<Option<JoinHandle<()>>>,
-}
-
-impl ServiceHandle {
-    /// Queues a command. Returns false if the service thread has stopped.
-    pub fn send(&self, command: Command) -> bool {
-        self.commands.send(command).is_ok()
-    }
-
-    pub fn logs(&self) -> Vec<LogEntry> {
-        self.logs.snapshot()
-    }
-
-    /// Stops the thread, which closes the connection to the service.
-    pub fn shutdown(&self) {
-        let _ = self.commands.send(Command::Shutdown);
-        if let Ok(mut thread) = self.thread.lock() {
-            if let Some(thread) = thread.take() {
-                let _ = thread.join();
-            }
-        }
-    }
-}
-
-type SourceFactory = Box<dyn FnMut() -> Result<Box<dyn TrackingSource>, SourceError> + Send>;
-
-/// Starts the thread that owns the tracking source.
-pub fn spawn<K: EventSink>(
-    factory: SourceFactory,
-    sink: K,
-    settings: Settings,
-    mock: bool,
-) -> std::io::Result<ServiceHandle> {
-    let (commands, receiver) = mpsc::channel();
-    let logs = LogBuffer::default();
-    let core = Core::new(sink, logs.clone(), settings, mock);
-    let thread = thread::Builder::new()
-        .name("marey-tracking".to_owned())
-        .spawn(move || run(core, factory, receiver))?;
-    Ok(ServiceHandle {
-        commands,
-        logs,
-        thread: Mutex::new(Some(thread)),
-    })
-}
-
-fn run<K: EventSink>(mut core: Core<K>, mut factory: SourceFactory, commands: Receiver<Command>) {
-    loop {
-        let mut source = match factory() {
-            Ok(source) => source,
-            Err(error) => {
-                core.set_unavailable(error.to_string());
-                core.flush();
-                if !wait_for_retry(&mut core, &commands) {
-                    return;
-                }
-                continue;
-            }
-        };
-        if !run_source(&mut core, source.as_mut(), &commands) {
-            return;
-        }
-    }
-}
-
-/// Serves commands while no source exists. Returns false when the service must stop.
-fn wait_for_retry<K: EventSink>(core: &mut Core<K>, commands: &Receiver<Command>) -> bool {
-    let deadline = Instant::now() + SOURCE_RETRY_INTERVAL;
-    loop {
-        let remaining = deadline.saturating_duration_since(Instant::now());
-        match commands.recv_timeout(remaining) {
-            Ok(command) => {
-                if !core.command(command, None) {
-                    return false;
-                }
-                core.flush();
-            }
-            Err(RecvTimeoutError::Timeout) => return true,
-            Err(RecvTimeoutError::Disconnected) => return false,
-        }
-    }
-}
-
-/// Runs until shutdown. A source lives as long as the process, because LeapC reconnects by itself.
-fn run_source<K: EventSink>(
-    core: &mut Core<K>,
-    source: &mut (dyn TrackingSource + 'static),
-    commands: &Receiver<Command>,
-) -> bool {
-    let mut last_refresh = Instant::now();
-    loop {
-        while let Ok(command) = commands.try_recv() {
-            if !core.command(command, Some(&mut *source)) {
-                return false;
-            }
-        }
-
-        let polled = source.poll(POLL_TIMEOUT, &mut |event| core.handle(event));
-        core.note_poll_error(polled.as_ref().err());
-        if polled.is_err() {
-            thread::sleep(POLL_ERROR_BACKOFF);
-        }
-        core.run_pending(source);
-
-        let now = Instant::now();
-        if now.duration_since(last_refresh) >= REFRESH_INTERVAL {
-            last_refresh = now;
-            source.refresh(&mut |event| core.handle(event));
-            core.run_pending(source);
-            core.tick(now);
-        }
-        core.flush();
-    }
-}
-
 #[cfg(test)]
 mod tests {
+    use std::collections::VecDeque;
+    use std::time::Duration;
+
     use super::*;
     use crate::leap::EventCallback;
-    use crate::models::{DeviceFlags, DeviceSummary};
+    use crate::models::DeviceFlags;
 
     #[derive(Default)]
     struct RecordingSink {
@@ -736,57 +594,5 @@ mod tests {
         assert_eq!(core.state().link.state, LinkState::SdkMissing);
         assert_eq!(core.state().link.detail.as_deref(), Some("not installed"));
         assert_eq!(core.sink.logs.len(), 1);
-    }
-
-    #[test]
-    fn log_buffer_is_bounded() {
-        let buffer = LogBuffer::default();
-        for i in 0..(MAX_LOG_ENTRIES + 5) {
-            buffer.push(LogEntry {
-                timestamp_ms: i as u64,
-                severity: LogSeverity::Info,
-                source: LogSource::App,
-                message: String::new(),
-            });
-        }
-        let entries = buffer.snapshot();
-        assert_eq!(entries.len(), MAX_LOG_ENTRIES);
-        assert_eq!(entries[0].timestamp_ms, 5);
-    }
-
-    #[test]
-    fn service_thread_runs_a_scripted_source_and_stops() {
-        struct Shared(Arc<Mutex<Vec<PanelState>>>);
-        impl EventSink for Shared {
-            fn state(&mut self, state: &PanelState) {
-                self.0.lock().unwrap().push(state.clone());
-            }
-            fn frame(&mut self, _: &TrackingFrame) -> bool {
-                true
-            }
-            fn images(&mut self, _: &StereoImage<'_>) -> bool {
-                true
-            }
-            fn log(&mut self, _: &LogEntry) {}
-            fn settings(&mut self, _: &Settings) {}
-        }
-        let states = Arc::new(Mutex::new(Vec::new()));
-        let factory: SourceFactory = Box::new(|| {
-            let mut source = ScriptedSource::default();
-            source.script.push_back(connected());
-            source.script.push_back(SourceEvent::DeviceAdded(device(7)));
-            Ok(Box::new(source))
-        });
-        let handle = spawn(factory, Shared(states.clone()), Settings::default(), false).unwrap();
-        let deadline = Instant::now() + Duration::from_secs(5);
-        let mut active = None;
-        while active.is_none() && Instant::now() < deadline {
-            let (reply, answer) = mpsc::channel();
-            assert!(handle.send(Command::GetState(reply)));
-            active = answer.recv().unwrap().active_device_id;
-        }
-        assert_eq!(active, Some(7));
-        handle.shutdown();
-        assert!(!states.lock().unwrap().is_empty());
     }
 }

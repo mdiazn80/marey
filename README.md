@@ -17,26 +17,30 @@ LeapC, and it does not track hands by itself. macOS on Apple silicon is the firs
 - Rust (stable) and the Xcode Command Line Tools, which provide libclang
 - Node.js and pnpm
 - Ultraleap Hand Tracking, which provides the service and the `LeapC.h` used at build time
-- Optional: [Task](https://taskfile.dev) for the shortcuts below
+- [Task](https://taskfile.dev), which runs the project's operations
+
+On macOS, install Task with Homebrew:
+
+```bash
+brew install go-task
+```
+
+See the [Task installation guide](https://taskfile.dev/installation/) for other systems.
 
 ## Setup and running
 
-```bash
-pnpm install
-```
+Run the app in development mode. Tasks that need the JavaScript dependencies install them first:
 
 ```bash
-pnpm tauri dev
+task dev
 ```
-
-With Task, `task dev` does the same and `task --list` shows every operation.
 
 ### Mock mode
 
 Run the app with synthetic hands and images, with no device or service:
 
 ```bash
-MAREY_MOCK=1 pnpm tauri dev
+task dev:mock
 ```
 
 A banner stays visible while it is on. Synthetic data never appears outside this mode.
@@ -63,15 +67,42 @@ MAREY_MOCK=1 cargo run -p marey --no-default-features
 
 Closing the window keeps Marey running in the tray. Quit it from the tray menu or the app menu.
 
-## Development
+## Tasks
+
+The operations are defined in [Taskfile.yml](Taskfile.yml). These are the basic ones:
+
+| Command            | What it does                                                       |
+| ------------------ | ------------------------------------------------------------------ |
+| `task dev`         | Runs the desktop app in development mode                           |
+| `task dev:mock`    | Runs it with simulated hands and images, with no device needed     |
+| `task dev:web`     | Runs only the frontend dev server, without the desktop shell       |
+| `task build`       | Builds the release app and installers                              |
+| `task build:debug` | Builds the app with debug symbols and devtools                     |
+| `task check`       | Runs the type check, formatting checks, linters and tests          |
+| `task test`        | Runs the Rust and frontend tests, which need no device             |
+| `task lint`        | Runs Clippy, with warnings as errors, and ESLint                   |
+| `task fmt`         | Formats Rust and the frontend                                      |
+| `task types`       | Regenerates the TypeScript types from the Rust DTOs                |
+| `task icon`        | Generates the app icons from `src/assets/brand/marey-app-icon.svg` |
+| `task clean`       | Removes the frontend bundle and the Rust `target` directory        |
+
+To see every task, run:
 
 ```bash
-task check
+task --list
 ```
 
-This runs the type check, formatting checks, Clippy, ESLint and the tests, none of which need a
-device. After changing a DTO in `src-tauri/src/models`, run `task types` to regenerate the TypeScript
-types.
+`task dev`, `task dev:mock`, `task build` and `task build:debug` pass anything after `--` to the Tauri
+CLI. For example, this builds only the macOS app bundle:
+
+```bash
+task build -- --bundles app
+```
+
+## Development
+
+Run `task check` before committing. None of its checks need a device. After changing a DTO in
+`src-tauri/src/models`, run `task types` to regenerate the TypeScript types.
 
 See [ARCHITECTURE.md](docs/ARCHITECTURE.md), [ROADMAP.md](docs/ROADMAP.md) and the
 [decision records](docs/adr).

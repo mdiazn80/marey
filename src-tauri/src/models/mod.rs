@@ -1,6 +1,8 @@
 //! Serializable data shared with the frontend. TypeScript types are generated from these
 //! definitions into `src/types/generated` by `task types`.
 
+use std::time::{SystemTime, UNIX_EPOCH};
+
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
@@ -158,6 +160,10 @@ pub enum TrackingMode {
     Unknown,
 }
 
+/// Highest rates at which the streams are sent to the UI, in Hz.
+const MAX_FRAME_RATE_HZ: u32 = 240;
+const MAX_IMAGE_RATE_HZ: u32 = 120;
+
 /// User preferences, persisted and re-applied on startup and on every device connection.
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase", default)]
@@ -187,8 +193,8 @@ impl Default for Settings {
 impl Settings {
     /// Returns a copy with the stream rates limited to the range the UI can use.
     pub fn sanitized(mut self) -> Self {
-        self.frame_rate_hz = self.frame_rate_hz.clamp(1, 240);
-        self.image_rate_hz = self.image_rate_hz.clamp(1, 120);
+        self.frame_rate_hz = self.frame_rate_hz.clamp(1, MAX_FRAME_RATE_HZ);
+        self.image_rate_hz = self.image_rate_hz.clamp(1, MAX_IMAGE_RATE_HZ);
         self
     }
 }
@@ -256,4 +262,20 @@ pub struct LogEntry {
     pub severity: LogSeverity,
     pub source: LogSource,
     pub message: String,
+}
+
+impl LogEntry {
+    /// Creates an entry stamped with the current time.
+    pub fn now(severity: LogSeverity, source: LogSource, message: String) -> Self {
+        let timestamp_ms = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map(|elapsed| elapsed.as_millis() as u64)
+            .unwrap_or(0);
+        Self {
+            timestamp_ms,
+            severity,
+            source,
+            message,
+        }
+    }
 }

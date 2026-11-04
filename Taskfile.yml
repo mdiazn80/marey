@@ -90,9 +90,11 @@ tasks:
       - pnpm format:check
 
   test:
-    desc: Run the Rust tests, which need no device
+    desc: Run the Rust and frontend tests, which need no device
+    deps: [install]
     cmds:
       - cargo test --workspace
+      - pnpm test
 
   types:
     desc: Regenerate the TypeScript types from the Rust DTOs
@@ -114,10 +116,12 @@ tasks:
       - pnpm tauri info
 
   icon:
-    desc: "Generate app icons from a source image (usage: task icon -- path/to/icon.png)"
+    desc: Generate the app icons from src/assets/brand/marey-app-icon.svg
     deps: [install]
     cmds:
-      - pnpm tauri icon {{.CLI_ARGS}}
+      - pnpm tauri icon src/assets/brand/marey-app-icon.svg
+      # Only the desktop icons are kept while there are no mobile targets.
+      - rm -rf src-tauri/icons/android src-tauri/icons/ios
 
   update:
     desc: Update JavaScript and Rust dependencies within their allowed ranges

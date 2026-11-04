@@ -2,12 +2,26 @@
 
 use tauri::menu::{Menu, MenuItem};
 use tauri::tray::TrayIconBuilder;
-use tauri::{include_image, AppHandle};
+use tauri::{include_image, AppHandle, Manager};
 
 const SHOW_ID: &str = "show";
 const QUIT_ID: &str = "quit";
 
+/// The menu entries whose text depends on the language of the UI.
+pub struct TrayMenu {
+    show: MenuItem<tauri::Wry>,
+    quit: MenuItem<tauri::Wry>,
+}
+
+impl TrayMenu {
+    pub fn set_labels(&self, show: &str, quit: &str) -> tauri::Result<()> {
+        self.show.set_text(show)?;
+        self.quit.set_text(quit)
+    }
+}
+
 pub fn create(app: &AppHandle) -> tauri::Result<()> {
+    // English until the frontend has loaded and sends the labels for its language.
     let show = MenuItem::with_id(app, SHOW_ID, "Show Marey", true, None::<&str>)?;
     let quit = MenuItem::with_id(app, QUIT_ID, "Quit Marey", true, None::<&str>)?;
     let menu = Menu::with_items(app, &[&show, &quit])?;
@@ -25,10 +39,11 @@ pub fn create(app: &AppHandle) -> tauri::Result<()> {
         .tooltip("Marey")
         .menu(&menu)
         .on_menu_event(|app, event| match event.id().as_ref() {
-            SHOW_ID => crate::focus_main_window(app),
+            SHOW_ID => crate::window::focus_main(app),
             QUIT_ID => app.exit(0),
             _ => {}
         })
         .build(app)?;
+    app.manage(TrayMenu { show, quit });
     Ok(())
 }

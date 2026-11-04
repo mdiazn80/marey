@@ -1,7 +1,5 @@
-import type { ChangeEvent, ReactNode } from "react";
-import { Card, Page } from "../../app/ui";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { useTranslation } from "react-i18next";
+import { Card, Page, WaitingPage } from "@/components/layout";
 import {
   Select,
   SelectContent,
@@ -9,150 +7,126 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
-import { usePanel } from "../../stores/panel";
-import type { TrackingMode } from "../../types/generated/TrackingMode";
+import { LANGUAGES } from "@/i18n/languages";
+import { usePanel } from "@/stores/panel";
+import type { TrackingMode } from "@/types/generated/TrackingMode";
+import { Field, RateField, SwitchField } from "./fields";
 
-const MODES: { value: TrackingMode; label: string }[] = [
-  { value: "desktop", label: "Desktop" },
-  { value: "hmd", label: "Head-mounted" },
-  { value: "screenTop", label: "Screentop" },
-];
+const MODES = ["desktop", "hmd", "screenTop"] as const;
 
-function Field({
-  id,
-  label,
-  hint,
-  children,
-}: {
-  id: string;
-  label: string;
-  hint?: string;
-  children: ReactNode;
-}) {
-  return (
-    <div className="flex items-center justify-between gap-6 border-b border-border py-2.5 last:border-0">
-      <div className="space-y-0.5">
-        <Label htmlFor={id}>{label}</Label>
-        {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
-      </div>
-      {children}
-    </div>
-  );
-}
+/** The backend limits rates to these values, in `Settings::sanitized`. */
+const MAX_FRAME_RATE_HZ = 240;
+const MAX_IMAGE_RATE_HZ = 120;
 
 export function SettingsView() {
+  const { t, i18n } = useTranslation();
   const settings = usePanel((s) => s.state?.settings);
   const reported = usePanel((s) => s.state?.trackingMode);
   const change = usePanel((s) => s.changeSettings);
   const policies = usePanel((s) => s.state?.policies);
   const hasDevice = usePanel((s) => (s.state?.devices.length ?? 0) > 0);
-  if (!settings) return <Page title="Settings">Waiting for the backend…</Page>;
+  if (!settings) return <WaitingPage title={t("views.settings")} />;
 
   /** Says so when the service does not report the option as requested. */
-  const reportedHint = (base: string, requested: boolean, actual: boolean | undefined) =>
+  const reportedHint = (hint: string, requested: boolean, actual: boolean | undefined) =>
     hasDevice && actual !== undefined && actual !== requested
-      ? `${base}. Requested ${requested ? "on" : "off"}, but the service reports ${actual ? "on" : "off"}`
-      : base;
-
-  const rate = (key: "frameRateHz" | "imageRateHz") => (event: ChangeEvent<HTMLInputElement>) => {
-    const value = Number(event.target.value);
-    if (Number.isFinite(value) && value >= 1) void change({ [key]: Math.round(value) });
-  };
+      ? t("settings.reportedMismatch", {
+          hint,
+          requested: requested ? t("common.on") : t("common.off"),
+          actual: actual ? t("common.on") : t("common.off"),
+        })
+      : hint;
 
   return (
-    <Page title="Settings">
-      <Card title="Tracking">
-        <Field
-          id="tracking-mode"
-          label="Tracking mode"
-          hint={reported && reported !== "unknown" ? `Device reports: ${reported}` : undefined}
-        >
+    <Page title={t("views.settings")}>
+      <Card title={t("settings.general")}>
+        <Field id="language" label={t("settings.language")}>
           <Select
-            value={settings.trackingMode}
-            onValueChange={(value) => void change({ trackingMode: value as TrackingMode })}
+            value={i18n.resolvedLanguage}
+            onValueChange={(language) => void i18n.changeLanguage(language)}
           >
-            <SelectTrigger id="tracking-mode" className="w-40">
+            <SelectTrigger id="language" className="w-44">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {MODES.map((mode) => (
-                <SelectItem key={mode.value} value={mode.value}>
-                  {mode.label}
+              {LANGUAGES.map((language) => (
+                <SelectItem key={language.code} value={language.code}>
+                  {language.name}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
         </Field>
+      </Card>
+      <Card title={t("settings.tracking")}>
         <Field
+          id="tracking-mode"
+          label={t("settings.trackingMode")}
+          hint={
+            reported && reported !== "unknown"
+              ? t("settings.deviceReports", { mode: t(`settings.modes.${reported}`) })
+              : undefined
+          }
+        >
+          <Select
+            value={settings.trackingMode}
+            onValueChange={(value) => void change({ trackingMode: value as TrackingMode })}
+          >
+            <SelectTrigger id="tracking-mode" className="w-44">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {MODES.map((mode) => (
+                <SelectItem key={mode} value={mode}>
+                  {t(`settings.modes.${mode}`)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </Field>
+        <SwitchField
           id="paused"
-          label="Pause tracking"
-          hint="Pauses the service for every app that uses it"
-        >
-          <Switch
-            id="paused"
-            checked={settings.paused}
-            onCheckedChange={(checked) => void change({ paused: checked })}
-          />
-        </Field>
-        <Field
+          label={t("settings.pause")}
+          hint={t("settings.pauseHint")}
+          checked={settings.paused}
+          onChange={(paused) => void change({ paused })}
+        />
+        <SwitchField
           id="imagesEnabled"
-          label="Allow images"
-          hint={reportedHint(
-            "Lets the Cameras view receive infrared images",
-            settings.imagesEnabled,
-            policies?.images,
-          )}
-        >
-          <Switch
-            id="imagesEnabled"
-            checked={settings.imagesEnabled}
-            onCheckedChange={(checked) => void change({ imagesEnabled: checked })}
-          />
-        </Field>
-        <Field
+          label={t("settings.images")}
+          hint={reportedHint(t("settings.imagesHint"), settings.imagesEnabled, policies?.images)}
+          checked={settings.imagesEnabled}
+          onChange={(imagesEnabled) => void change({ imagesEnabled })}
+        />
+        <SwitchField
           id="backgroundFrames"
-          label="Background frames"
+          label={t("settings.backgroundFrames")}
           hint={reportedHint(
-            "Keep receiving data while this window is not focused",
+            t("settings.backgroundFramesHint"),
             settings.backgroundFrames,
             policies?.backgroundFrames,
           )}
-        >
-          <Switch
-            id="backgroundFrames"
-            checked={settings.backgroundFrames}
-            onCheckedChange={(checked) => void change({ backgroundFrames: checked })}
-          />
-        </Field>
+          checked={settings.backgroundFrames}
+          onChange={(backgroundFrames) => void change({ backgroundFrames })}
+        />
       </Card>
-      <Card title="Display rates">
-        <Field id="frameRateHz" label="Tracking frames to the UI" hint="1 to 240 Hz">
-          <Input
-            id="frameRateHz"
-            type="number"
-            min={1}
-            max={240}
-            className="w-20"
-            value={settings.frameRateHz}
-            onChange={rate("frameRateHz")}
-          />
-        </Field>
-        <Field id="imageRateHz" label="Camera images to the UI" hint="1 to 120 Hz">
-          <Input
-            id="imageRateHz"
-            type="number"
-            min={1}
-            max={120}
-            className="w-20"
-            value={settings.imageRateHz}
-            onChange={rate("imageRateHz")}
-          />
-        </Field>
+      <Card title={t("settings.displayRates")}>
+        <RateField
+          id="frameRateHz"
+          label={t("settings.frameRate")}
+          max={MAX_FRAME_RATE_HZ}
+          value={settings.frameRateHz}
+          onChange={(frameRateHz) => void change({ frameRateHz })}
+        />
+        <RateField
+          id="imageRateHz"
+          label={t("settings.imageRate")}
+          max={MAX_IMAGE_RATE_HZ}
+          value={settings.imageRateHz}
+          onChange={(imageRateHz) => void change({ imageRateHz })}
+        />
       </Card>
-      <p className="text-xs text-muted-foreground">
-        Saved automatically and applied again on every start and device connection.
-      </p>
+      <p className="text-xs text-muted-foreground">{t("settings.savedNote")}</p>
     </Page>
   );
 }

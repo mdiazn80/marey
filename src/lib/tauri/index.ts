@@ -3,10 +3,10 @@ import { getVersion } from "@tauri-apps/api/app";
 import { Channel, invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { openUrl } from "@tauri-apps/plugin-opener";
-import type { LogEntry } from "../../types/generated/LogEntry";
-import type { PanelState } from "../../types/generated/PanelState";
-import type { Settings } from "../../types/generated/Settings";
-import type { TrackingFrame } from "../../types/generated/TrackingFrame";
+import type { LogEntry } from "@/types/generated/LogEntry";
+import type { PanelState } from "@/types/generated/PanelState";
+import type { Settings } from "@/types/generated/Settings";
+import type { TrackingFrame } from "@/types/generated/TrackingFrame";
 
 const STATE_EVENT = "marey://state";
 const LOG_EVENT = "marey://log";
@@ -18,6 +18,8 @@ export const getLogs = () => invoke<LogEntry[]>("get_logs");
 export const selectDevice = (id: number) => invoke<void>("select_device", { id });
 export const updateSettings = (settings: Settings) => invoke<void>("update_settings", { settings });
 export const copyText = (text: string) => invoke<void>("copy_text", { text });
+export const setTrayLabels = (show: string, quit: string) =>
+  invoke<void>("set_tray_labels", { show, quit });
 export const exportText = (fileName: string, contents: string) =>
   invoke<string | null>("export_text", { fileName, contents });
 

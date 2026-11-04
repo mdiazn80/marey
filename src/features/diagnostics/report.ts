@@ -1,7 +1,11 @@
-import type { PanelState } from "../../types/generated/PanelState";
-import { activeFlags } from "../devices/flags";
+import { activeFlags } from "@/features/devices/flags";
+import { hex } from "@/lib/format";
+import type { PanelState } from "@/types/generated/PanelState";
 
-/** Builds the plain-text report meant to be pasted into a bug report. */
+/**
+ * Builds the plain-text report meant to be pasted into a bug report. It is always in English, so
+ * maintainers can read it whatever language the app is using.
+ */
 export function buildReport(state: PanelState): string {
   const { link, devices, activeDeviceId, policies, settings, stats, trackingMode } = state;
   const lines = [
@@ -18,20 +22,20 @@ export function buildReport(state: PanelState): string {
   ];
   if (devices.length === 0) lines.push("none");
   for (const device of devices) {
-    const flags = activeFlags(device.flags).map((flag) => flag.label);
+    const flags = activeFlags(device.flags).map((flag) => flag.key);
     lines.push(
       `${device.id === activeDeviceId ? "* " : "  "}${device.product} (id ${device.id})`,
       `  serial: ${device.serial || "unknown"}`,
       `  firmware: ${device.firmware ?? "not exposed by LeapC"}`,
-      `  pid: 0x${device.pid.toString(16).padStart(4, "0")}`,
-      `  status: 0x${device.rawStatus.toString(16).padStart(8, "0")} [${flags.join(", ") || "no flags"}]`,
+      `  pid: ${hex(device.pid, 4)}`,
+      `  status: ${hex(device.rawStatus, 8)} [${flags.join(", ") || "no flags"}]`,
       `  baseline: ${device.baselineMm} mm, fov: ${device.hFovDeg.toFixed(1)} x ${device.vFovDeg.toFixed(1)} deg, range: ${device.rangeMm} mm (0 = not reported)`,
     );
   }
   lines.push(
     "",
     "[Policies reported by the service]",
-    `raw: 0x${policies.raw.toString(16)}`,
+    `raw: ${hex(policies.raw)}`,
     `images: ${policies.images}`,
     `background frames: ${policies.backgroundFrames}`,
     `allow pause/resume: ${policies.allowPauseResume}`,

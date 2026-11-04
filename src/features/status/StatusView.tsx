@@ -1,39 +1,41 @@
-import { Card, Page, Row, StatusBadge } from "../../app/ui";
-import { usePanel } from "../../stores/panel";
-import type { LinkState } from "../../types/generated/LinkState";
+import { useTranslation } from "react-i18next";
+import { Card, Page, Row, WaitingPage } from "@/components/layout";
+import { StatusBadge } from "@/components/status";
+import { usePanel } from "@/stores/panel";
 import { LinkNotice } from "./LinkNotice";
 
-const LINK_LABELS: Record<LinkState, string> = {
-  starting: "Starting",
-  sdkMissing: "Software not found",
-  serviceNotRunning: "Service not running",
-  connecting: "Connecting",
-  connected: "Connected",
-};
-
 export function StatusView() {
+  const { t } = useTranslation();
   const state = usePanel((s) => s.state);
-  if (!state) return <Page title="Status">Waiting for the backend…</Page>;
+  if (!state) return <WaitingPage title={t("views.status")} />;
   const { link, devices, stats } = state;
   const connected = link.state === "connected";
   return (
-    <Page title="Status">
+    <Page title={t("views.status")}>
       <LinkNotice />
-      <Card title="Tracking service">
+      <Card title={t("status.trackingService")}>
         <Row
-          label="Connection"
+          label={t("status.connection")}
           value={
-            <StatusBadge tone={connected ? "good" : "warn"}>{LINK_LABELS[link.state]}</StatusBadge>
+            <StatusBadge tone={connected ? "good" : "warn"}>
+              {t(`link.states.${link.state}`)}
+            </StatusBadge>
           }
         />
-        <Row label="Service version" value={link.serviceVersion ?? "—"} />
-        <Row label="LeapC client version" value={link.clientVersion ?? "—"} />
-        <Row label="Connected devices" value={devices.length} />
+        <Row label={t("status.serviceVersion")} value={link.serviceVersion ?? "—"} />
+        <Row label={t("status.clientVersion")} value={link.clientVersion ?? "—"} />
+        <Row label={t("status.connectedDevices")} value={devices.length} />
       </Card>
-      <Card title="Data flow">
-        <Row label="Tracking rate" value={`${stats.trackingFps.toFixed(1)} fps`} />
-        <Row label="Image rate" value={`${stats.imageFps.toFixed(1)} fps`} />
-        <Row label="Frames received" value={stats.framesReceived} />
+      <Card title={t("status.dataFlow")}>
+        <Row
+          label={t("status.trackingRate")}
+          value={t("common.fps", { value: stats.trackingFps.toFixed(1) })}
+        />
+        <Row
+          label={t("status.imageRate")}
+          value={t("common.fps", { value: stats.imageFps.toFixed(1) })}
+        />
+        <Row label={t("status.framesReceived")} value={stats.framesReceived} />
       </Card>
     </Page>
   );
