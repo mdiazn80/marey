@@ -7,9 +7,11 @@ mock mode.
 
 ## Open problems
 
-- **Stream stall on an original controller with service 6.2.0:** frames stopped once for both Marey
-  and the Control Panel, and replugging the device restored them. It did not recur after running
-  LeapC clients, pausing and resuming, or quitting Marey. The cause is unknown.
+- **Stream stalls on an original controller with service 6.2.0:** frames stopped twice on one day. The
+  service stayed connected, kept listing the device and used no CPU, and the Control Panel stopped
+  updating as well. Replugging restored the stream the first time, and the service also crashed and
+  restarted at about that moment (exit code 5, with a dump in `/etc/ultraleap/crashes`). The cause of
+  the stalls is unknown.
 - **Device status on the original controller:** it stays at `0x0` while streaming, and field of view
   and range read 0. Do not use the streaming flag to decide whether data is flowing.
 - **Background frames policy:** the service reports it as off after we request it, yet frames still
