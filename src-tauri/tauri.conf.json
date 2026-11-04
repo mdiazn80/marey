@@ -12,14 +12,16 @@
   "app": {
     "windows": [
       {
-        "title": "marey",
-        "width": 800,
-        "height": 600,
+        "title": "Marey",
+        "width": 1280,
+        "height": 820,
+        "minWidth": 960,
+        "minHeight": 600,
         "visible": false
       }
     ],
     "security": {
-      "csp": null
+      "csp": "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' blob: ipc: http://ipc.localhost; worker-src 'self' blob:"
     }
   },
   "bundle": {
@@ -32,15 +34,41 @@
       "icons/128x128@2x.png",
       "icons/icon.icns",
       "icons/icon.ico"
-    ]
+    ],
+    "windows": {
+      "nsis": {
+        "installerIcon": "icons/icon.ico",
+        "headerImage": "installer/nsis-header.bmp",
+        "sidebarImage": "installer/nsis-sidebar.bmp"
+      },
+      "wix": {
+        "bannerPath": "installer/wix-banner.bmp",
+        "dialogImagePath": "installer/wix-dialog.bmp"
+      }
+    },
+    "macOS": {
+      "dmg": {
+        "background": "installer/dmg-background.png",
+        "windowSize": {
+          "width": 660,
+          "height": 400
+        },
+        "appPosition": {
+          "x": 180,
+          "y": 170
+        },
+        "applicationFolderPosition": {
+          "x": 480,
+          "y": 170
+        }
+      }
+    }
   },
   "plugins": {
     "updater": {
       "requireSignedVersion": true,
       "pubkey": "",
-      "endpoints": [
-        "https://github.com/mdiazn80/marey/releases/latest/download/latest.json"
-      ]
+      "endpoints": ["https://github.com/mdiazn80/marey/releases/latest/download/latest.json"]
     }
   }
 }

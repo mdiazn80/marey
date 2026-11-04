@@ -1,0 +1,8 @@
+dist
+target
+src-tauri/target
+src-tauri/gen
+src/types/generated
+pnpm-lock.yaml
+docs/leap-motion-repos-github-en.md
+src/components/ui

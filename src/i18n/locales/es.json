@@ -1,0 +1,154 @@
+{
+  "common": {
+    "waitingForBackend": "Esperando al backend…",
+    "copied": "Copiado",
+    "on": "activado",
+    "off": "desactivado",
+    "fps": "{{value}} fps",
+    "notReported": "No disponible"
+  },
+  "views": {
+    "visualizer": "Visualizador",
+    "status": "Estado",
+    "devices": "Dispositivos",
+    "cameras": "Cámaras",
+    "settings": "Ajustes",
+    "logs": "Registros",
+    "diagnostics": "Diagnóstico"
+  },
+  "app": {
+    "simulationBanner": "Modo simulación: todos los datos del dispositivo son sintéticos (MAREY_MOCK=1)",
+    "backendError": "No se pudo conectar con el backend",
+    "actionError": "No se pudo completar la acción",
+    "viewsLabel": "Vistas"
+  },
+  "footer": {
+    "openRepository": "Abrir el repositorio de Marey en GitHub",
+    "repository": "Repositorio de GitHub",
+    "openRepositoryError": "No se pudo abrir el repositorio: {{error}}"
+  },
+  "tray": {
+    "show": "Mostrar Marey",
+    "quit": "Salir de Marey"
+  },
+  "link": {
+    "states": {
+      "starting": "Iniciando",
+      "sdkMissing": "Software no encontrado",
+      "serviceNotRunning": "Servicio detenido",
+      "connecting": "Conectando",
+      "connected": "Conectado"
+    },
+    "starting": "Iniciando…",
+    "sdkMissingTitle": "No se encontró el software de seguimiento de Ultraleap",
+    "sdkMissingBody": "Instala Ultraleap Hand Tracking o define LEAPSDK_LIB_PATH con el directorio lib del SDK. Marey lo reintenta cada pocos segundos. Para probar la aplicación sin él, iníciala con MAREY_MOCK=1.",
+    "serviceNotRunningTitle": "El servicio de seguimiento no está en marcha",
+    "serviceNotRunningBody": "Inicia Ultraleap Hand Tracking. Marey se reconecta cuando el servicio vuelve.",
+    "connectingTitle": "Conectando con el servicio de seguimiento…",
+    "connectingBody": "Si este aviso no desaparece, comprueba que Ultraleap Hand Tracking esté en marcha.",
+    "noDeviceTitle": "No hay ningún dispositivo conectado",
+    "noDeviceBody": "Conecta un dispositivo Leap Motion o Ultraleap. Aparecerá aquí automáticamente.",
+    "noFramesTitle": "Dispositivo detectado, pero no llegan fotogramas",
+    "noFramesBody": "El servicio muestra {{product}}, pero no envía fotogramas de seguimiento. Desconecta el dispositivo y vuelve a conectarlo. También puede que otra aplicación haya pausado el seguimiento en todo el servicio."
+  },
+  "status": {
+    "trackingService": "Servicio de seguimiento",
+    "connection": "Conexión",
+    "serviceVersion": "Versión del servicio",
+    "clientVersion": "Versión del cliente LeapC",
+    "connectedDevices": "Dispositivos conectados",
+    "dataFlow": "Flujo de datos",
+    "trackingRate": "Frecuencia de seguimiento",
+    "imageRate": "Frecuencia de imágenes",
+    "framesReceived": "Fotogramas recibidos"
+  },
+  "devices": {
+    "active": "Activo",
+    "makeActive": "Activar",
+    "serial": "Número de serie",
+    "firmware": "Firmware",
+    "firmwareNotExposed": "LeapC no lo proporciona",
+    "productId": "ID de producto",
+    "baseline": "Separación de las cámaras",
+    "fieldOfView": "Campo de visión",
+    "range": "Alcance",
+    "trackingRate": "Frecuencia de seguimiento",
+    "rawStatus": "Estado sin procesar",
+    "noFlags": "Sin indicadores de estado",
+    "flags": {
+      "streaming": "Transmitiendo",
+      "paused": "En pausa",
+      "robust": "Modo robusto",
+      "smudged": "Sucio",
+      "lowResource": "Pocos recursos",
+      "unknownFailure": "Fallo desconocido",
+      "badCalibration": "Calibración incorrecta",
+      "badFirmware": "Firmware incorrecto",
+      "badTransport": "Transporte incorrecto",
+      "badControl": "Control incorrecto"
+    }
+  },
+  "visualizer": {
+    "tracking": "Seguimiento {{fps}} fps",
+    "render": "Renderizado {{fps}} fps",
+    "noHands": "No hay manos a la vista",
+    "leftHand": "Mano izquierda",
+    "rightHand": "Mano derecha",
+    "confidence": "Confianza",
+    "grab": "Agarre",
+    "pinch": "Pinza",
+    "pinchDistance": "Distancia de pinza",
+    "visible": "Visible"
+  },
+  "cameras": {
+    "left": "Cámara izquierda",
+    "right": "Cámara derecha",
+    "stopImages": "Detener imágenes",
+    "allowImages": "Permitir imágenes",
+    "imagesOffTitle": "Las imágenes están desactivadas",
+    "imagesOffBody": "Permite las imágenes para ver la vista infrarroja de cada cámara.",
+    "waiting": "Esperando imágenes del dispositivo…",
+    "unsupported": "El formato de imagen de este dispositivo aún no es compatible"
+  },
+  "settings": {
+    "general": "General",
+    "language": "Idioma",
+    "tracking": "Seguimiento",
+    "trackingMode": "Modo de seguimiento",
+    "deviceReports": "El dispositivo indica: {{mode}}",
+    "modes": {
+      "desktop": "Escritorio",
+      "hmd": "Montado en la cabeza",
+      "screenTop": "Sobre la pantalla"
+    },
+    "pause": "Pausar el seguimiento",
+    "pauseHint": "Pausa el servicio para todas las aplicaciones que lo usan",
+    "images": "Permitir imágenes",
+    "imagesHint": "Permite que la vista Cámaras reciba imágenes infrarrojas",
+    "backgroundFrames": "Fotogramas en segundo plano",
+    "backgroundFramesHint": "Sigue recibiendo datos cuando esta ventana no tiene el foco",
+    "reportedMismatch": "{{hint}}. Solicitado: {{requested}}; el servicio indica: {{actual}}",
+    "displayRates": "Frecuencias de visualización",
+    "frameRate": "Fotogramas de seguimiento a la interfaz",
+    "imageRate": "Imágenes de cámara a la interfaz",
+    "rateRange": "De 1 a {{max}} Hz",
+    "savedNote": "Se guarda automáticamente y se aplica de nuevo en cada inicio y cada vez que se conecta un dispositivo."
+  },
+  "logs": {
+    "levels": {
+      "all": "Todas",
+      "critical": "Crítico",
+      "warning": "Advertencia",
+      "info": "Información"
+    },
+    "filter": "Filtrar por gravedad",
+    "copy": "Copiar",
+    "export": "Exportar",
+    "clear": "Borrar",
+    "saved": "Guardado en {{path}}",
+    "empty": "No hay entradas de registro."
+  },
+  "diagnostics": {
+    "copyReport": "Copiar para informe de errores"
+  }
+}

@@ -1,0 +1,11 @@
+[package]
+name = "leapc"
+version = "0.1.0"
+edition = "2021"
+description = "Thin safe wrapper over the runtime-loaded LeapC library"
+license = "MIT OR Apache-2.0"
+publish = false
+
+[dependencies]
+leapc-sys = { path = "../leapc-sys" }
+thiserror = "2"

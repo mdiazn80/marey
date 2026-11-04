@@ -1,9 +1,6 @@
 # https://taskfile.dev
 version: "3"
 
-vars:
-  TAURI_DIR: src-tauri
-
 tasks:
   default:
     desc: List available tasks
@@ -25,6 +22,14 @@ tasks:
   dev:
     desc: Run the desktop app in development mode
     deps: [install]
+    cmds:
+      - pnpm tauri dev {{.CLI_ARGS}}
+
+  dev:mock:
+    desc: Run the desktop app with simulated hands and images, no device needed
+    deps: [install]
+    env:
+      MAREY_MOCK: "1"
     cmds:
       - pnpm tauri dev {{.CLI_ARGS}}
 
@@ -59,34 +64,42 @@ tasks:
       - pnpm exec tsc --noEmit
 
   cargo:check:
-    desc: Compile-check the Rust backend
-    dir: "{{.TAURI_DIR}}"
+    desc: Compile-check the Rust workspace
     cmds:
-      - cargo check
+      - cargo check --workspace
 
   lint:
-    desc: Lint the Rust backend with Clippy, treating warnings as errors
-    dir: "{{.TAURI_DIR}}"
+    desc: Lint Rust with Clippy (warnings are errors) and the frontend with ESLint
+    deps: [install]
     cmds:
-      - cargo clippy --all-targets -- -D warnings
+      - cargo clippy --workspace --all-targets -- -D warnings
+      - pnpm lint
 
   fmt:
-    desc: Format the Rust backend
-    dir: "{{.TAURI_DIR}}"
+    desc: Format Rust and the frontend
+    deps: [install]
     cmds:
-      - cargo fmt
+      - cargo fmt --all
+      - pnpm format
 
   fmt:check:
-    desc: Verify the Rust backend formatting
-    dir: "{{.TAURI_DIR}}"
+    desc: Verify Rust and frontend formatting
+    deps: [install]
     cmds:
-      - cargo fmt --check
+      - cargo fmt --all --check
+      - pnpm format:check
 
   test:
-    desc: Run the Rust backend tests
-    dir: "{{.TAURI_DIR}}"
+    desc: Run the Rust and frontend tests, which need no device
+    deps: [install]
     cmds:
-      - cargo test
+      - cargo test --workspace
+      - pnpm test
+
+  types:
+    desc: Regenerate the TypeScript types from the Rust DTOs
+    cmds:
+      - cargo test -p marey export_bindings
 
   check:
     desc: Run all static checks and tests
@@ -103,19 +116,21 @@ tasks:
       - pnpm tauri info
 
   icon:
-    desc: "Generate app icons from a source image (usage: task icon -- path/to/icon.png)"
+    desc: Generate the app icons from src/assets/brand/marey-app-icon.svg
     deps: [install]
     cmds:
-      - pnpm tauri icon {{.CLI_ARGS}}
+      - pnpm tauri icon src/assets/brand/marey-app-icon.svg
+      # Only the desktop icons are kept while there are no mobile targets.
+      - rm -rf src-tauri/icons/android src-tauri/icons/ios
 
   update:
     desc: Update JavaScript and Rust dependencies within their allowed ranges
     cmds:
       - pnpm update
-      - cargo update --manifest-path {{.TAURI_DIR}}/Cargo.toml
+      - cargo update
 
   clean:
     desc: Remove build output (frontend bundle and Rust target directory)
     cmds:
       - rm -rf dist
-      - cargo clean --manifest-path {{.TAURI_DIR}}/Cargo.toml
+      - cargo clean
