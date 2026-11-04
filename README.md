@@ -6,9 +6,9 @@ device status, a live 3D hand view, infrared camera images, tracking settings, l
 Marey talks to the Ultraleap tracking service through LeapC. It does not include the service or
 LeapC, and it does not track hands by itself. macOS on Apple silicon is the first supported platform.
 
-> **Known issue:** with Ultraleap Hand Tracking 6.2.0, an original Leap Motion Controller is listed
-> but sent no frames in our tests. See [Troubleshooting](#troubleshooting). Mock mode works without
-> any device.
+> **Known issue:** with Ultraleap Hand Tracking 6.2.0, an original Leap Motion Controller stopped
+> sending frames once in our tests, until it was unplugged and plugged back in. See
+> [Troubleshooting](#troubleshooting).
 
 ## Prerequisites
 
@@ -80,13 +80,16 @@ with `--no-default-features`.
 
 **"The tracking service is not running"**: start Ultraleap Hand Tracking. Marey reconnects by itself.
 
-**"Device detected, but it is not streaming"**: the service lists the device but sends no frames.
-Check whether the Ultraleap Control Panel shows hands. If it does not, the problem is between the
-service and the device, not in Marey. Ultraleap's 6.x software is reported to target newer devices,
-so an original Leap Motion Controller may need an older tracking version.
+**"Device detected, but no frames are arriving"**: unplug the device and plug it back in, which
+restored the stream when this happened in our tests. The Ultraleap Control Panel showed 0.00 fps at
+the same time, so the stall was not specific to Marey. Its cause is still unknown. Also check that no
+app has paused tracking, because pausing applies to the whole service.
 
-**Camera view stays on "Waiting for images"**: images need a streaming device. Settings shows a note
-when the service does not report a requested option as on.
+**"No status flags set" while tracking works**: an original Leap Motion Controller reported status
+`0x0` even while streaming at about 115 fps, so Marey shows the measured tracking rate as well.
+
+**Camera view stays on "Waiting for images"**: images need a device that is sending frames. Settings
+shows a note when the service does not report a requested option as on.
 
 ## Licence and third parties
 

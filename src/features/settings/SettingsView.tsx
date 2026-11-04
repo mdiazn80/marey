@@ -61,7 +61,7 @@ export function SettingsView() {
             ))}
           </select>
         </Field>
-        <Field label="Pause tracking">
+        <Field label="Pause tracking" hint="Pauses the service for every app that uses it">
           <input
             type="checkbox"
             checked={settings.paused}

@@ -7,9 +7,13 @@ mock mode.
 
 ## Open problems
 
-- **Original controller on service 6.2.0:** the service lists the device (PID `0x0003`), but in our
-  tests it stayed at status `0x0` and sent no frames. It also reported the background frames policy
-  as off after we requested it. See the README's troubleshooting section.
+- **Stream stall on an original controller with service 6.2.0:** frames stopped once for both Marey
+  and the Control Panel, and replugging the device restored them. It did not recur after running
+  LeapC clients, pausing and resuming, or quitting Marey. The cause is unknown.
+- **Device status on the original controller:** it stays at `0x0` while streaming, and field of view
+  and range read 0. Do not use the streaming flag to decide whether data is flowing.
+- **Background frames policy:** the service reports it as off after we request it, yet frames still
+  reached unfocused clients in our tests.
 - **Firmware version:** LeapC 6.2 has no public call for it, so the UI says it is not exposed.
 
 ## Extension points, not implemented

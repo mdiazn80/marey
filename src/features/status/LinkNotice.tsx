@@ -44,11 +44,12 @@ export function LinkNotice() {
     );
   }
   const active = devices.find((d) => d.id === activeDeviceId);
-  if (active && !settings.paused && stats.framesReceived === 0 && !active.flags.streaming) {
+  // The rate, not the status flags: an original controller reports status 0 even while streaming.
+  if (active && !settings.paused && stats.trackingFps === 0) {
     return (
-      <Notice tone="warn" title="Device detected, but it is not streaming">
-        The service lists {active.product} but has sent no tracking frames. This service version may
-        not support this device; check whether the Ultraleap Control Panel shows hands.
+      <Notice tone="warn" title="Device detected, but no frames are arriving">
+        The service lists {active.product} but is not sending tracking frames. Unplug the device and
+        plug it back in. Another app may also have paused tracking for the whole service.
       </Notice>
     );
   }

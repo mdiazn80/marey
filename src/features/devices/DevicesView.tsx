@@ -7,6 +7,7 @@ export function DevicesView() {
   const devices = usePanel((s) => s.state?.devices ?? []);
   const activeId = usePanel((s) => s.state?.activeDeviceId ?? null);
   const selectDevice = usePanel((s) => s.selectDevice);
+  const trackingFps = usePanel((s) => s.state?.stats.trackingFps ?? 0);
   return (
     <Page title="Devices">
       <LinkNotice />
@@ -40,6 +41,7 @@ export function DevicesView() {
               label="Range"
               value={device.rangeMm > 0 ? `${device.rangeMm.toFixed(0)} mm` : "Not reported"}
             />
+            {isActive && <Row label="Tracking rate" value={`${trackingFps.toFixed(0)} fps`} />}
             <Row label="Raw status" value={`0x${device.rawStatus.toString(16).padStart(8, "0")}`} />
             <div className="mt-3 flex flex-wrap gap-1.5">
               {flags.length === 0 && <Badge tone="muted">No status flags set</Badge>}
