@@ -1,6 +1,8 @@
 // Typed wrappers around Tauri. This is the only module allowed to import from @tauri-apps.
+import { getVersion } from "@tauri-apps/api/app";
 import { Channel, invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
+import { openUrl } from "@tauri-apps/plugin-opener";
 import type { LogEntry } from "../../types/generated/LogEntry";
 import type { PanelState } from "../../types/generated/PanelState";
 import type { Settings } from "../../types/generated/Settings";
@@ -9,6 +11,8 @@ import type { TrackingFrame } from "../../types/generated/TrackingFrame";
 const STATE_EVENT = "marey://state";
 const LOG_EVENT = "marey://log";
 
+export const getAppVersion = () => getVersion();
+export const openExternalUrl = (url: string) => openUrl(url);
 export const getState = () => invoke<PanelState>("get_state");
 export const getLogs = () => invoke<LogEntry[]>("get_logs");
 export const selectDevice = (id: number) => invoke<void>("select_device", { id });

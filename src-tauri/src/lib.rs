@@ -11,7 +11,7 @@ use leap::mock::{self, MockSource};
 use leap::service::{self, ServiceHandle};
 use leap::{SourceError, TrackingSource};
 use streaming::{StreamChannels, TauriSink};
-use tauri::{Manager, RunEvent};
+use tauri::{Manager, RunEvent, WindowEvent};
 use tauri_plugin_log::log::LevelFilter;
 
 /// Largest size of a log file before it is rotated, in bytes.
@@ -110,6 +110,15 @@ pub fn run() {
         .plugin(tauri_plugin_store::Builder::new().build())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_clipboard_manager::init())
+        .on_window_event(|window, event| {
+            // Closing the window keeps the app running. It quits from the tray or the app menu.
+            if let WindowEvent::CloseRequested { api, .. } = event {
+                api.prevent_close();
+                if let Err(error) = window.hide() {
+                    log::warn!("could not hide the window: {error}");
+                }
+            }
+        })
         .setup(|app| {
             #[cfg(desktop)]
             tray::create(app.handle())?;
@@ -128,11 +137,15 @@ pub fn run() {
         ])
         .build(tauri::generate_context!())
         .expect("error while building the application")
-        .run(|app, event| {
-            if let RunEvent::Exit = event {
+        .run(|app, event| match event {
+            RunEvent::Exit => {
                 if let Some(service) = app.try_state::<ServiceHandle>() {
                     service.shutdown();
                 }
             }
+            // Clicking the Dock icon brings back a hidden window.
+            #[cfg(target_os = "macos")]
+            RunEvent::Reopen { .. } => focus_main_window(app),
+            _ => {}
         });
 }

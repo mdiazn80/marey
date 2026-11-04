@@ -59,6 +59,10 @@ MAREY_MOCK=1 cargo run -p marey --no-default-features
 | `LEAPSDK_LIB_PATH` | Directory holding the LeapC library, instead of the default path |
 | `MAREY_MOCK`       | `1` turns on simulation; any other value leaves it off           |
 
+## Closing and quitting
+
+Closing the window keeps Marey running in the tray. Quit it from the tray menu or the app menu.
+
 ## Development
 
 ```bash
