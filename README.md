@@ -12,6 +12,24 @@ LeapC, and it does not track hands by itself. macOS on Apple silicon is the firs
 > sending frames during our tests, for every client of the service. See
 > [Troubleshooting](#troubleshooting).
 
+## Screenshots
+
+These screenshots come from [mock mode](#mock-mode), so the hands, images and device data are synthetic.
+
+![Visualizer view: live 3D hands above the device, with confidence, grab and pinch values for each hand](docs/assets/screenshots/visualizer.png)
+
+| Status                                                                                              | Devices                                                                                   |
+| --------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| ![Status view: tracking service connection and data flow rates](docs/assets/screenshots/status.png) | ![Devices view: details of the connected controller](docs/assets/screenshots/devices.png) |
+
+| Cameras                                                                            | Settings                                                                                                            |
+| ---------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| ![Cameras view: left and right camera images](docs/assets/screenshots/cameras.png) | ![Settings view: language, tracking mode, tracking options and display rates](docs/assets/screenshots/settings.png) |
+
+| Logs                                                                                                        | Diagnostics                                                                                              |
+| ----------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| ![Logs view: service and app log entries with severity filter and export](docs/assets/screenshots/logs.png) | ![Diagnostics view: report that can be copied for a bug report](docs/assets/screenshots/diagnostics.png) |
+
 ## Prerequisites
 
 - Rust (stable) and the Xcode Command Line Tools, which provide libclang
