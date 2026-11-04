@@ -4,6 +4,8 @@ pub mod leap;
 pub mod models;
 mod settings;
 pub mod streaming;
+#[cfg(desktop)]
+mod tray;
 
 use leap::mock::{self, MockSource};
 use leap::service::{self, ServiceHandle};
@@ -54,7 +56,7 @@ fn start_service(app: &tauri::AppHandle) -> std::io::Result<ServiceHandle> {
 
 /// Brings the running instance to the front when the app is launched again.
 #[cfg(desktop)]
-fn focus_main_window(app: &tauri::AppHandle) {
+pub(crate) fn focus_main_window(app: &tauri::AppHandle) {
     let Some(window) = app.get_webview_window("main") else {
         log::warn!("second launch detected, but the main window does not exist");
         return;
@@ -109,6 +111,8 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_clipboard_manager::init())
         .setup(|app| {
+            #[cfg(desktop)]
+            tray::create(app.handle())?;
             let service = start_service(app.handle())?;
             app.manage(service);
             Ok(())

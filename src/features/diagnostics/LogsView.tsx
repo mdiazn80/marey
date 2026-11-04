@@ -1,5 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Button, Page } from "../../app/ui";
+import { Page } from "../../app/ui";
+import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { copyText, exportText } from "../../lib/tauri";
 import { usePanel } from "../../stores/panel";
 import type { LogEntry } from "../../types/generated/LogEntry";
@@ -13,10 +21,10 @@ const LEVELS: { value: LogSeverity | "all"; label: string }[] = [
 ];
 
 const SEVERITY_COLOR: Record<LogSeverity, string> = {
-  critical: "text-red-300",
-  warning: "text-amber-300",
-  info: "text-white/70",
-  unknown: "text-white/40",
+  critical: "text-destructive",
+  warning: "text-warning",
+  info: "text-foreground/80",
+  unknown: "text-muted-foreground",
 };
 
 function formatEntry(entry: LogEntry) {
@@ -50,21 +58,29 @@ export function LogsView() {
       title="Logs"
       actions={
         <>
-          {feedback && <span className="text-xs text-white/50">{feedback}</span>}
-          <select
-            aria-label="Filter by severity"
-            className="rounded border border-white/15 bg-[#14171c] px-2 py-1 text-xs"
-            value={level}
-            onChange={(e) => setLevel(e.target.value as LogSeverity | "all")}
-          >
-            {LEVELS.map((item) => (
-              <option key={item.value} value={item.value}>
-                {item.label}
-              </option>
-            ))}
-          </select>
-          <Button onClick={() => run(() => copyText(asText()).then(() => "Copied"))}>Copy</Button>
+          {feedback && <span className="text-xs text-muted-foreground">{feedback}</span>}
+          <Select value={level} onValueChange={(value) => setLevel(value as LogSeverity | "all")}>
+            <SelectTrigger size="sm" aria-label="Filter by severity" className="w-36">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {LEVELS.map((item) => (
+                <SelectItem key={item.value} value={item.value}>
+                  {item.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <Button
+            variant="outline"
+            size="sm"
+            onClick={() => run(() => copyText(asText()).then(() => "Copied"))}
+          >
+            Copy
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
             onClick={() =>
               run(() =>
                 exportText("marey-logs.txt", asText()).then((path) =>
@@ -75,12 +91,14 @@ export function LogsView() {
           >
             Export
           </Button>
-          <Button onClick={clearLogs}>Clear</Button>
+          <Button variant="ghost" size="sm" onClick={clearLogs}>
+            Clear
+          </Button>
         </>
       }
     >
-      <div className="selectable min-h-0 flex-1 overflow-y-auto rounded border border-white/10 bg-black/30 p-3 font-mono text-xs leading-5">
-        {visible.length === 0 && <p className="text-white/40">No log entries.</p>}
+      <div className="selectable min-h-0 flex-1 overflow-y-auto rounded border border-border bg-card p-3 font-mono text-xs leading-5">
+        {visible.length === 0 && <p className="text-muted-foreground">No log entries.</p>}
         {visible.map((entry, index) => (
           <div key={index} className={SEVERITY_COLOR[entry.severity]}>
             {formatEntry(entry)}

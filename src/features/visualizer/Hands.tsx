@@ -20,8 +20,8 @@ const STALE_AFTER_MS = 500;
 /** Width of the links drawn to give the palm a visible outline, in millimetres. */
 const LINK_WIDTH_MM = 10;
 
-const LEFT_COLOR = new THREE.Color("#5cc8ff");
-const RIGHT_COLOR = new THREE.Color("#ffb454");
+const LEFT_COLOR = new THREE.Color("#EEEAE0");
+const RIGHT_COLOR = new THREE.Color("#FF5A36");
 const UP = new THREE.Vector3(0, 1, 0);
 
 /** Instanced meshes updated in place every render frame, without any React state. */

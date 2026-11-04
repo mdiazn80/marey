@@ -61,24 +61,24 @@ export function Scene({
   const edges = useMemo(() => volumeEdges(volume), [volume]);
   return (
     <Canvas camera={{ position: [0, 4.5, 7], fov: 45 }} dpr={[1, 2]}>
-      <color attach="background" args={["#0d0f12"]} />
+      <color attach="background" args={["#0E0D0B"]} />
       <ambientLight intensity={0.6} />
       <directionalLight position={[3, 8, 5]} intensity={1.4} />
       <Grid
         args={[20, 20]}
         cellSize={0.5}
         sectionSize={2}
-        cellColor="#262b33"
-        sectionColor="#3a424e"
+        cellColor="#2a2720"
+        sectionColor="#454137"
         fadeDistance={22}
         infiniteGrid
       />
       <mesh position={[0, 0.06, 0]}>
         <boxGeometry args={[0.8, 0.11, 0.3]} />
-        <meshStandardMaterial color="#8d96a3" metalness={0.5} roughness={0.4} />
+        <meshStandardMaterial color="#8f8a7d" metalness={0.5} roughness={0.4} />
       </mesh>
       <lineSegments geometry={edges}>
-        <lineBasicMaterial color="#4b8f8c" transparent opacity={0.55} />
+        <lineBasicMaterial color="#FF5A36" transparent opacity={0.4} />
       </lineSegments>
       <Hands renderCounterRef={renderCounterRef} />
       <OrbitControls target={[0, 2, 0]} maxPolarAngle={Math.PI * 0.55} />

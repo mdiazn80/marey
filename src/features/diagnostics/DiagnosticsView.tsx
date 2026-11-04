@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Button, Page } from "../../app/ui";
+import { Page } from "../../app/ui";
+import { Button } from "@/components/ui/button";
 import { copyText } from "../../lib/tauri";
 import { usePanel } from "../../stores/panel";
 import { buildReport } from "./report";
@@ -14,8 +15,10 @@ export function DiagnosticsView() {
       title="Diagnostics"
       actions={
         <>
-          {feedback && <span className="text-xs text-white/50">{feedback}</span>}
+          {feedback && <span className="text-xs text-muted-foreground">{feedback}</span>}
           <Button
+            variant="outline"
+            size="sm"
             onClick={() => {
               copyText(report).then(
                 () => setFeedback("Copied"),
@@ -28,7 +31,7 @@ export function DiagnosticsView() {
         </>
       }
     >
-      <pre className="selectable overflow-x-auto rounded border border-white/10 bg-black/30 p-4 font-mono text-xs leading-5 text-white/85">
+      <pre className="selectable overflow-x-auto rounded border border-border bg-card p-4 font-mono text-xs leading-5 text-foreground">
         {report}
       </pre>
     </Page>

@@ -1,5 +1,15 @@
 import type { ChangeEvent, ReactNode } from "react";
 import { Card, Page } from "../../app/ui";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { usePanel } from "../../stores/panel";
 import type { TrackingMode } from "../../types/generated/TrackingMode";
 
@@ -9,19 +19,27 @@ const MODES: { value: TrackingMode; label: string }[] = [
   { value: "screenTop", label: "Screentop" },
 ];
 
-function Field({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
+function Field({
+  id,
+  label,
+  hint,
+  children,
+}: {
+  id: string;
+  label: string;
+  hint?: string;
+  children: ReactNode;
+}) {
   return (
-    <label className="flex items-center justify-between gap-6 border-b border-white/5 py-2.5 last:border-0">
-      <span>
-        <span className="block">{label}</span>
-        {hint && <span className="block text-xs text-white/45">{hint}</span>}
-      </span>
+    <div className="flex items-center justify-between gap-6 border-b border-border py-2.5 last:border-0">
+      <div className="space-y-0.5">
+        <Label htmlFor={id}>{label}</Label>
+        {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
+      </div>
       {children}
-    </label>
+    </div>
   );
 }
-
-const CONTROL = "rounded border border-white/15 bg-[#14171c] px-2 py-1 text-white";
 
 export function SettingsView() {
   const settings = usePanel((s) => s.state?.settings);
@@ -46,29 +64,39 @@ export function SettingsView() {
     <Page title="Settings">
       <Card title="Tracking">
         <Field
+          id="tracking-mode"
           label="Tracking mode"
           hint={reported && reported !== "unknown" ? `Device reports: ${reported}` : undefined}
         >
-          <select
-            className={CONTROL}
+          <Select
             value={settings.trackingMode}
-            onChange={(e) => void change({ trackingMode: e.target.value as TrackingMode })}
+            onValueChange={(value) => void change({ trackingMode: value as TrackingMode })}
           >
-            {MODES.map((mode) => (
-              <option key={mode.value} value={mode.value}>
-                {mode.label}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger id="tracking-mode" className="w-40">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {MODES.map((mode) => (
+                <SelectItem key={mode.value} value={mode.value}>
+                  {mode.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </Field>
-        <Field label="Pause tracking" hint="Pauses the service for every app that uses it">
-          <input
-            type="checkbox"
+        <Field
+          id="paused"
+          label="Pause tracking"
+          hint="Pauses the service for every app that uses it"
+        >
+          <Switch
+            id="paused"
             checked={settings.paused}
-            onChange={(e) => void change({ paused: e.target.checked })}
+            onCheckedChange={(checked) => void change({ paused: checked })}
           />
         </Field>
         <Field
+          id="imagesEnabled"
           label="Allow images"
           hint={reportedHint(
             "Lets the Cameras view receive infrared images",
@@ -76,13 +104,14 @@ export function SettingsView() {
             policies?.images,
           )}
         >
-          <input
-            type="checkbox"
+          <Switch
+            id="imagesEnabled"
             checked={settings.imagesEnabled}
-            onChange={(e) => void change({ imagesEnabled: e.target.checked })}
+            onCheckedChange={(checked) => void change({ imagesEnabled: checked })}
           />
         </Field>
         <Field
+          id="backgroundFrames"
           label="Background frames"
           hint={reportedHint(
             "Keep receiving data while this window is not focused",
@@ -90,36 +119,38 @@ export function SettingsView() {
             policies?.backgroundFrames,
           )}
         >
-          <input
-            type="checkbox"
+          <Switch
+            id="backgroundFrames"
             checked={settings.backgroundFrames}
-            onChange={(e) => void change({ backgroundFrames: e.target.checked })}
+            onCheckedChange={(checked) => void change({ backgroundFrames: checked })}
           />
         </Field>
       </Card>
       <Card title="Display rates">
-        <Field label="Tracking frames to the UI" hint="1 to 240 Hz">
-          <input
+        <Field id="frameRateHz" label="Tracking frames to the UI" hint="1 to 240 Hz">
+          <Input
+            id="frameRateHz"
             type="number"
             min={1}
             max={240}
-            className={`${CONTROL} w-20`}
+            className="w-20"
             value={settings.frameRateHz}
             onChange={rate("frameRateHz")}
           />
         </Field>
-        <Field label="Camera images to the UI" hint="1 to 120 Hz">
-          <input
+        <Field id="imageRateHz" label="Camera images to the UI" hint="1 to 120 Hz">
+          <Input
+            id="imageRateHz"
             type="number"
             min={1}
             max={120}
-            className={`${CONTROL} w-20`}
+            className="w-20"
             value={settings.imageRateHz}
             onChange={rate("imageRateHz")}
           />
         </Field>
       </Card>
-      <p className="text-xs text-white/45">
+      <p className="text-xs text-muted-foreground">
         Saved automatically and applied again on every start and device connection.
       </p>
     </Page>

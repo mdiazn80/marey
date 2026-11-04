@@ -1,4 +1,4 @@
-import { Badge, Card, Page, Row } from "../../app/ui";
+import { Card, Page, Row, StatusBadge } from "../../app/ui";
 import { usePanel } from "../../stores/panel";
 import type { LinkState } from "../../types/generated/LinkState";
 import { LinkNotice } from "./LinkNotice";
@@ -22,7 +22,9 @@ export function StatusView() {
       <Card title="Tracking service">
         <Row
           label="Connection"
-          value={<Badge tone={connected ? "good" : "warn"}>{LINK_LABELS[link.state]}</Badge>}
+          value={
+            <StatusBadge tone={connected ? "good" : "warn"}>{LINK_LABELS[link.state]}</StatusBadge>
+          }
         />
         <Row label="Service version" value={link.serviceVersion ?? "—"} />
         <Row label="LeapC client version" value={link.clientVersion ?? "—"} />

@@ -1,3 +1,5 @@
+<img src="docs/assets/marey-lockup-on-dark.png" alt="Marey" width="320" />
+
 # Marey
 
 An open-source desktop control panel for Leap Motion and Ultraleap hand tracking devices: service and

@@ -17,13 +17,15 @@ function HandCard({ hand }: { hand: Hand }) {
     ["Visible", `${(hand.visibleTimeUs / 1_000_000).toFixed(1)} s`],
   ];
   return (
-    <div className="w-44 rounded border border-white/10 bg-black/60 p-2.5 text-xs">
-      <p className={`mb-1 font-medium ${hand.side === "left" ? "text-sky-300" : "text-amber-300"}`}>
+    <div className="w-44 rounded border border-border bg-card/85 p-2.5 text-xs">
+      <p
+        className={`mb-1 font-medium ${hand.side === "left" ? "text-foreground" : "text-primary"}`}
+      >
         {hand.side === "left" ? "Left hand" : "Right hand"}
       </p>
       {rows.map(([label, value]) => (
         <div key={label} className="flex justify-between">
-          <span className="text-white/50">{label}</span>
+          <span className="text-muted-foreground">{label}</span>
           <span className="font-mono">{value}</span>
         </div>
       ))}
@@ -70,13 +72,13 @@ export function VisualizerView() {
       <div className="pointer-events-none absolute inset-x-4 top-4">
         <LinkNotice />
       </div>
-      <div className="pointer-events-none absolute right-4 bottom-4 rounded border border-white/10 bg-black/60 px-3 py-2 font-mono text-xs">
+      <div className="pointer-events-none absolute right-4 bottom-4 rounded border border-border bg-card/85 px-3 py-2 font-mono text-xs">
         <div>Tracking {(stats?.trackingFps ?? 0).toFixed(0)} fps</div>
         <div>Render {overlay.renderFps.toFixed(0)} fps</div>
       </div>
       <div className="pointer-events-none absolute bottom-4 left-4 flex gap-2">
         {overlay.hands.length === 0 && (
-          <div className="rounded border border-white/10 bg-black/60 px-3 py-2 text-xs text-white/60">
+          <div className="rounded border border-border bg-card/85 px-3 py-2 text-xs text-muted-foreground">
             No hands in view
           </div>
         )}

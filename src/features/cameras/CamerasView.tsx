@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { Button, Notice, Page } from "../../app/ui";
+import { Notice, Page } from "../../app/ui";
+import { Button } from "@/components/ui/button";
 import { usePanel } from "../../stores/panel";
 import { streams, type StereoImages } from "../../stores/streams";
 import { LinkNotice } from "../status/LinkNotice";
@@ -78,7 +79,11 @@ export function CamerasView() {
     <Page
       title="Cameras"
       actions={
-        <Button onClick={() => void changeSettings({ imagesEnabled: !imagesEnabled })}>
+        <Button
+          variant={imagesEnabled ? "outline" : "default"}
+          size="sm"
+          onClick={() => void changeSettings({ imagesEnabled: !imagesEnabled })}
+        >
           {imagesEnabled ? "Stop images" : "Allow images"}
         </Button>
       }
@@ -105,10 +110,10 @@ export function CamerasView() {
               <canvas
                 ref={camera.ref}
                 aria-label={camera.label}
-                className="w-full rounded border border-white/10 bg-black"
+                className="w-full rounded border border-border bg-black"
                 style={{ imageRendering: "pixelated" }}
               />
-              <figcaption className="mt-1 text-xs text-white/50">{camera.label}</figcaption>
+              <figcaption className="mt-1 text-xs text-muted-foreground">{camera.label}</figcaption>
             </figure>
           ))}
         </div>

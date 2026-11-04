@@ -80,6 +80,8 @@ meshes are updated in place.
 
 ## Frontend rules
 
+- UI components come from shadcn/ui in `src/components/ui`, and are not edited for app-specific needs.
+  The brand theme lives in `src/styles.css`, and `src/app/ui.tsx` composes the shared building blocks.
 - Only `src/lib/tauri` may import `@tauri-apps/*`. ESLint enforces this.
 - Types in `src/types/generated` come from Rust (`task types`) and are not edited by hand.
 
