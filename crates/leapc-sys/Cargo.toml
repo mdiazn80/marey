@@ -1,0 +1,17 @@
+[package]
+name = "leapc-sys"
+version = "0.1.0"
+edition = "2021"
+description = "Runtime-loaded FFI bindings generated from the installed Ultraleap LeapC.h"
+license = "MIT OR Apache-2.0"
+publish = false
+
+[lib]
+# The generated documentation comments are not Rust examples.
+doctest = false
+
+[dependencies]
+libloading = "0.8"
+
+[build-dependencies]
+bindgen = "0.72"

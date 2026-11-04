@@ -1,9 +1,9 @@
 [package]
 name = "marey"
 version = "0.1.0"
-description = "A Tauri App"
-authors = ["you"]
-edition = "2024"
+description = "Open-source control panel for Leap Motion and Ultraleap hand tracking devices"
+authors = ["Miguel Diaz"]
+edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -14,25 +14,29 @@ edition = "2024"
 name = "marey_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
+[features]
+default = ["leapc"]
+# Disable to build a mock-only app on machines without the Ultraleap SDK.
+leapc = ["dep:leapc"]
+
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
+leapc = { path = "../crates/leapc", optional = true }
 tauri = { version = "2", features = [] }
 tauri-plugin-opener = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 tauri-plugin-log = "2"
 tauri-plugin-notification = "2"
+tauri-plugin-store = "2.5.0"
+tauri-plugin-dialog = "2.8.4"
+tauri-plugin-clipboard-manager = "2.5.0"
+thiserror = "2.0.21"
+log = "0.4.35"
+ts-rs = { version = "12.0.1", features = ["no-serde-warnings"] }
 
-
-# Read the optimization guideline for more details: https://tauri.app/concept/size/#cargo-configuration
-[profile.release]
-codegen-units = 1
-lto = true
-opt-level = 3
-panic = "abort"
-strip = true
 
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
 tauri-plugin-single-instance = "2"
